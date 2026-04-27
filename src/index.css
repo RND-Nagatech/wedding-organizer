@@ -1,0 +1,157 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Wedding Organizer Design System
+   Elegant • Minimal • Romantic
+   All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    /* Base palette — ivory & charcoal */
+    --background: 36 33% 97%;
+    --foreground: 25 20% 15%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 25 20% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 25 20% 15%;
+
+    /* Primary — deep rose / burgundy */
+    --primary: 350 30% 35%;
+    --primary-foreground: 36 33% 97%;
+    --primary-soft: 350 30% 92%;
+
+    /* Secondary — champagne / blush */
+    --secondary: 28 40% 92%;
+    --secondary-foreground: 25 25% 20%;
+
+    /* Accent — gold */
+    --accent: 38 50% 60%;
+    --accent-foreground: 25 30% 15%;
+    --accent-soft: 38 60% 95%;
+
+    --muted: 30 20% 94%;
+    --muted-foreground: 25 10% 45%;
+
+    --destructive: 0 65% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 145 40% 40%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 35 85% 55%;
+    --warning-foreground: 25 30% 15%;
+
+    --border: 30 20% 88%;
+    --input: 30 20% 90%;
+    --ring: 350 30% 35%;
+
+    --radius: 0.75rem;
+
+    /* Gradients */
+    --gradient-hero: linear-gradient(135deg, hsl(28 40% 92%) 0%, hsl(36 33% 97%) 50%, hsl(350 30% 95%) 100%);
+    --gradient-primary: linear-gradient(135deg, hsl(350 30% 35%) 0%, hsl(350 35% 45%) 100%);
+    --gradient-gold: linear-gradient(135deg, hsl(38 50% 60%) 0%, hsl(38 60% 75%) 100%);
+    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(36 33% 99%) 100%);
+
+    /* Shadows */
+    --shadow-soft: 0 2px 12px -2px hsl(25 20% 15% / 0.06);
+    --shadow-elegant: 0 10px 40px -10px hsl(350 30% 35% / 0.15);
+    --shadow-gold: 0 8px 30px -8px hsl(38 50% 60% / 0.35);
+
+    /* Transitions */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+    /* Sidebar */
+    --sidebar-background: 36 33% 98%;
+    --sidebar-foreground: 25 20% 25%;
+    --sidebar-primary: 350 30% 35%;
+    --sidebar-primary-foreground: 36 33% 97%;
+    --sidebar-accent: 28 40% 94%;
+    --sidebar-accent-foreground: 350 30% 35%;
+    --sidebar-border: 30 20% 90%;
+    --sidebar-ring: 350 30% 35%;
+  }
+
+  .dark {
+    --background: 25 15% 10%;
+    --foreground: 36 33% 95%;
+    --card: 25 15% 13%;
+    --card-foreground: 36 33% 95%;
+    --popover: 25 15% 13%;
+    --popover-foreground: 36 33% 95%;
+    --primary: 350 40% 60%;
+    --primary-foreground: 25 15% 10%;
+    --primary-soft: 350 30% 20%;
+    --secondary: 25 15% 18%;
+    --secondary-foreground: 36 33% 95%;
+    --accent: 38 50% 60%;
+    --accent-foreground: 25 15% 10%;
+    --accent-soft: 38 30% 20%;
+    --muted: 25 15% 18%;
+    --muted-foreground: 30 10% 65%;
+    --border: 25 15% 22%;
+    --input: 25 15% 22%;
+    --ring: 350 40% 60%;
+    --sidebar-background: 25 15% 12%;
+    --sidebar-foreground: 36 33% 90%;
+    --sidebar-primary: 350 40% 60%;
+    --sidebar-primary-foreground: 25 15% 10%;
+    --sidebar-accent: 25 15% 18%;
+    --sidebar-accent-foreground: 36 33% 95%;
+    --sidebar-border: 25 15% 20%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-feature-settings: "ss01", "cv11";
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display tracking-tight;
+  }
+}
+
+@layer utilities {
+  .font-display {
+    font-family: 'Playfair Display', serif;
+  }
+  .font-sans {
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+  .bg-gradient-hero {
+    background: var(--gradient-hero);
+  }
+  .bg-gradient-primary {
+    background: var(--gradient-primary);
+  }
+  .bg-gradient-gold {
+    background: var(--gradient-gold);
+  }
+  .bg-gradient-card {
+    background: var(--gradient-card);
+  }
+  .shadow-soft {
+    box-shadow: var(--shadow-soft);
+  }
+  .shadow-elegant {
+    box-shadow: var(--shadow-elegant);
+  }
+  .shadow-gold {
+    box-shadow: var(--shadow-gold);
+  }
+  .transition-smooth {
+    transition: var(--transition-smooth);
+  }
+}
