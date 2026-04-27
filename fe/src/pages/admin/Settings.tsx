@@ -84,7 +84,7 @@ const Settings = () => (
           <Input defaultValue="hello@aurelia.com" className="mt-1.5" />
         </div>
         <div>
-          <Label>Nomor Telepon</Label>
+          <Label>Nomor HP/WA</Label>
           <Input defaultValue="021-555-1234" className="mt-1.5" />
         </div>
         <div>

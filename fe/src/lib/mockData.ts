@@ -11,13 +11,14 @@ export type Permission =
   | "bookings"
   | "timeline"
   | "invoices"
+  | "payments"
   | "reports"
   | "settings";
 
 export const rolePermissions: Record<Exclude<Role, "client">, Permission[]> = {
-  owner: ["dashboard", "clients", "vendors", "packages", "bookings", "timeline", "invoices", "reports", "settings"],
-  admin: ["dashboard", "clients", "vendors", "packages", "bookings", "timeline", "invoices", "reports"],
-  staff: ["dashboard", "clients", "vendors", "bookings", "timeline"],
+  owner: ["dashboard", "clients", "vendors", "packages", "bookings", "timeline", "invoices", "payments", "reports", "settings"],
+  admin: ["dashboard", "clients", "vendors", "packages", "bookings", "timeline", "invoices", "payments", "reports"],
+  staff: ["dashboard", "clients", "vendors", "bookings", "timeline", "payments"],
 };
 
 export const roleLabel: Record<Role, string> = {
@@ -34,6 +35,7 @@ export const can = (role: Role, perm: Permission): boolean => {
 
 export type Client = {
   id: string;
+  code?: string;
   name: string;
   partner: string;
   email: string;
@@ -47,10 +49,13 @@ export type Client = {
 export type Vendor = {
   id: string;
   name: string;
-  category: "Catering" | "Dekorasi" | "Fotografi" | "MUA" | "Venue" | "Musik";
+  category: string;
+  categoryId?: string;
   contact: string;
   rating: number;
   priceRange: string;
+  alamat?: string;
+  telepon?: string;
 };
 
 export type Package = {
@@ -59,16 +64,26 @@ export type Package = {
   tagline: string;
   price: number;
   features: string[];
+  vendorIds?: string[]; // vendor yang boleh masuk paket
   popular?: boolean;
 };
 
 export type Booking = {
   id: string;
+  code?: string;
   clientId: string;
   packageId: string;
   eventDate: string;
   venue: string;
   guests: number;
+  vendorSelectedIds?: string[];
+  packageSnapshot?: {
+    name?: string;
+    tagline?: string;
+    price?: number;
+    features?: string[];
+    vendorIds?: string[];
+  };
   status: "Pending" | "Confirmed" | "Done";
 };
 

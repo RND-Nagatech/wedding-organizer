@@ -1,7 +1,7 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Users, Store, Package, CalendarDays,
-  ListChecks, Receipt, BarChart3, LogOut, Heart, Menu, X, Settings
+  ListChecks, Receipt, BarChart3, LogOut, Heart, Menu, X, Settings, ChevronRight, ChevronDown
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -9,16 +9,22 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { can, roleLabel, type Permission } from "@/lib/mockData";
 
-type NavItem = { to: string; label: string; icon: any; end?: boolean; perm?: Permission };
+type NavItem = { to: string; label: string; icon: any; end?: boolean; perm?: Permission; submenu?: NavItem[] };
 
 const adminNav: NavItem[] = [
   { to: "/admin", label: "Dashboard", icon: LayoutDashboard, end: true, perm: "dashboard" },
-  { to: "/admin/clients", label: "Klien", icon: Users, perm: "clients" },
-  { to: "/admin/vendors", label: "Vendor", icon: Store, perm: "vendors" },
-  { to: "/admin/packages", label: "Paket", icon: Package, perm: "packages" },
+  {
+    to: "/admin/master", label: "Master", icon: Settings, submenu: [
+      { to: "/admin/clients", label: "Klien", icon: Users, perm: "clients" },
+      { to: "/admin/vendor-categories", label: "Kategori Vendor", icon: ListChecks },
+      { to: "/admin/vendors", label: "Vendor", icon: Store, perm: "vendors" },
+      { to: "/admin/packages", label: "Paket", icon: Package, perm: "packages" },
+    ]
+  },
   { to: "/admin/bookings", label: "Booking", icon: CalendarDays, perm: "bookings" },
   { to: "/admin/timeline", label: "Timeline", icon: ListChecks, perm: "timeline" },
   { to: "/admin/invoices", label: "Invoice", icon: Receipt, perm: "invoices" },
+  { to: "/admin/payments", label: "Pembayaran", icon: Receipt, perm: "payments" },
   { to: "/admin/reports", label: "Laporan", icon: BarChart3, perm: "reports" },
   { to: "/admin/settings", label: "Pengaturan", icon: Settings, perm: "settings" },
 ];
@@ -29,6 +35,7 @@ const clientNav: NavItem[] = [
   { to: "/client/booking", label: "Booking Saya", icon: CalendarDays },
   { to: "/client/timeline", label: "Timeline", icon: ListChecks },
   { to: "/client/invoices", label: "Invoice", icon: Receipt },
+  { to: "/client/payments", label: "Pembayaran", icon: Receipt },
 ];
 
 export const AppLayout = ({ children }: { children: React.ReactNode }) => {
@@ -36,6 +43,7 @@ export const AppLayout = ({ children }: { children: React.ReactNode }) => {
   const nav = useNavigate();
   const loc = useLocation();
   const [open, setOpen] = useState(false);
+  const [openSubmenu, setOpenSubmenu] = useState<string|null>(null);
 
   if (!user) return <>{children}</>;
 
@@ -75,6 +83,50 @@ export const AppLayout = ({ children }: { children: React.ReactNode }) => {
 
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
           {items.map((item) => {
+            if (item.submenu) {
+              const expanded = openSubmenu === item.to;
+              return (
+                <div key={item.to} className="mb-2">
+                  <button
+                    type="button"
+                    className={cn(
+                      "flex items-center gap-3 px-3 py-2.5 rounded-lg w-full text-sm font-medium transition-smooth",
+                      expanded
+                        ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                        : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+                    )}
+                    onClick={() => setOpenSubmenu(expanded ? null : item.to)}
+                  >
+                    <item.icon className="w-4 h-4" />
+                    <span className="flex-1 text-left">{item.label}</span>
+                    {expanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                  </button>
+                  {expanded && (
+                    <div className="ml-6 space-y-1 mt-1">
+                      {item.submenu.map((sub) => {
+                        const active = isActive(sub.to, sub.end);
+                        return (
+                          <Link
+                            key={sub.to}
+                            to={sub.to}
+                            onClick={() => setOpen(false)}
+                            className={cn(
+                              "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-smooth",
+                              active
+                                ? "bg-primary/10 text-primary font-medium"
+                                : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+                            )}
+                          >
+                            <sub.icon className="w-4 h-4" />
+                            {sub.label}
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            }
             const active = isActive(item.to, item.end);
             return (
               <Link

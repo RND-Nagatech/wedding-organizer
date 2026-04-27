@@ -1,10 +1,13 @@
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
-import { clients, formatDate, formatIDR, invoices } from "@/lib/mockData";
+import { formatDate, formatIDR } from "@/lib/mockData";
 import { Receipt } from "lucide-react";
+import { useClients, useInvoices } from "@/lib/dataStore";
 
 const Invoices = ({ filterClientId }: { filterClientId?: string }) => {
+  const invoices = useInvoices();
+  const clients = useClients();
   const list = filterClientId ? invoices.filter((i) => i.clientId === filterClientId) : invoices;
   const totalDue = list.reduce((s, i) => s + (i.amount - i.paid), 0);
   const totalPaid = list.reduce((s, i) => s + i.paid, 0);

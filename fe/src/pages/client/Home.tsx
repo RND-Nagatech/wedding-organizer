@@ -2,22 +2,29 @@ import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
-import { bookings, checklist, clients, formatDate, formatIDR, invoices, packages } from "@/lib/mockData";
+import { formatDate, formatIDR } from "@/lib/mockData";
 import { Heart, CalendarHeart, Receipt, ListChecks, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useBookings, useChecklist, useClients, useInvoices, usePackages } from "@/lib/dataStore";
 
 const ClientHome = () => {
   const { user } = useAuth();
-  const cId = user?.clientId || "c-001";
-  const client = clients.find((c) => c.id === cId)!;
+  const cId = user?.clientId || "";
+  const clients = useClients();
+  const bookings = useBookings();
+  const packages = usePackages();
+  const invoices = useInvoices();
+  const checklist = useChecklist();
+
+  const client = clients.find((c) => c.id === cId);
   const booking = bookings.find((b) => b.clientId === cId);
-  const pkg = packages.find((p) => p.id === client.packageId);
+  const pkg = packages.find((p) => p.id === client?.packageId);
   const inv = invoices.find((i) => i.clientId === cId);
   const tasks = checklist.filter((t) => t.bookingId === booking?.id);
   const doneTasks = tasks.filter((t) => t.done).length;
 
   const today = new Date();
-  const wedDate = new Date(client.weddingDate);
+  const wedDate = new Date(client?.weddingDate || new Date().toISOString().slice(0, 10));
   const daysToGo = Math.max(0, Math.ceil((wedDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)));
 
   return (
@@ -31,9 +38,9 @@ const ClientHome = () => {
             <Heart className="w-3 h-3 fill-accent" /> Hari spesial Anda
           </div>
           <h1 className="font-display text-4xl lg:text-6xl mt-3">
-            {client.name} <em className="text-primary">&</em> {client.partner}
+            {client?.name || "—"} <em className="text-primary">&</em> {client?.partner || "—"}
           </h1>
-          <div className="mt-4 text-muted-foreground">{formatDate(client.weddingDate)}</div>
+          <div className="mt-4 text-muted-foreground">{client?.weddingDate ? formatDate(client.weddingDate) : "—"}</div>
 
           <div className="mt-8 flex items-end gap-4">
             <div className="font-display text-7xl lg:text-8xl text-primary leading-none">{daysToGo}</div>
@@ -55,7 +62,7 @@ const ClientHome = () => {
               <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:translate-x-1 transition-smooth" />
             </div>
             <div className="text-xs uppercase tracking-wider text-muted-foreground">Paket Anda</div>
-            <div className="font-display text-2xl mt-1">{pkg?.name}</div>
+            <div className="font-display text-2xl mt-1">{pkg?.name || "—"}</div>
             <div className="text-sm text-muted-foreground mt-1">{formatIDR(pkg?.price || 0)}</div>
           </Card>
         </Link>

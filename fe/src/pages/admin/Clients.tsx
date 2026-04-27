@@ -6,14 +6,22 @@ import { formatDate } from "@/lib/mockData";
 import { useClients, usePackages } from "@/lib/dataStore";
 import { Search, Mail, Phone } from "lucide-react";
 import { useState } from "react";
-import { AddClientDialog } from "@/components/dialogs/AddClientDialog";
+import { AddClientDialog, ClientFormDialog } from "@/components/dialogs/AddClientDialog";
+import { Button } from "@/components/ui/button";
+import { Pencil, Trash2 } from "lucide-react";
+import { ConfirmActionDialog } from "@/components/dialogs/ConfirmActionDialog";
+import { store } from "@/lib/dataStore";
+import { toast } from "sonner";
 
 const Clients = () => {
   const clients = useClients();
   const packages = usePackages();
   const [q, setQ] = useState("");
   const filtered = clients.filter(
-    (c) => c.name.toLowerCase().includes(q.toLowerCase()) || c.partner.toLowerCase().includes(q.toLowerCase())
+    (c) =>
+      c.name.toLowerCase().includes(q.toLowerCase()) ||
+      c.partner.toLowerCase().includes(q.toLowerCase()) ||
+      (c.code || "").toLowerCase().includes(q.toLowerCase())
   );
 
   return (
@@ -36,10 +44,41 @@ const Clients = () => {
             <Card key={c.id} className="p-5 border-border shadow-soft hover:shadow-elegant transition-smooth bg-gradient-card">
               <div className="flex items-start justify-between mb-3">
                 <div>
+                  <div className="text-[11px] uppercase tracking-wider text-muted-foreground">{c.code || "—"}</div>
                   <h3 className="font-display text-lg leading-tight">{c.name}</h3>
                   <p className="text-sm text-muted-foreground">& {c.partner}</p>
                 </div>
-                <StatusBadge status={c.status} />
+                <div className="flex items-center gap-2">
+                  <StatusBadge status={c.status} />
+                  <ClientFormDialog
+                    mode="edit"
+                    initial={c}
+                    triggerLabel="Edit"
+                    trigger={
+                      <Button size="icon" variant="ghost">
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                    }
+                  />
+                  <ConfirmActionDialog
+                    title="Hapus klien?"
+                    description={`Data klien ${c.name} akan dihapus permanen.`}
+                    confirmText="Hapus"
+                    onConfirm={async () => {
+                      try {
+                        await store.deleteClient(c.id);
+                        toast.success("Klien berhasil dihapus");
+                      } catch (err: any) {
+                        toast.error(err?.message || "Gagal menghapus klien");
+                      }
+                    }}
+                    trigger={
+                      <Button size="icon" variant="ghost" className="text-destructive hover:text-destructive">
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    }
+                  />
+                </div>
               </div>
               <div className="space-y-1.5 text-sm text-muted-foreground">
                 <div className="flex items-center gap-2"><Mail className="w-3.5 h-3.5" /> {c.email}</div>

@@ -11,6 +11,10 @@ const variants: Record<string, string> = {
   Paid: "bg-success/15 text-success",
   Partial: "bg-warning/15 text-warning",
   Unpaid: "bg-destructive/10 text-destructive",
+  "belum bayar": "bg-destructive/10 text-destructive",
+  DP: "bg-warning/15 text-warning",
+  cicilan: "bg-warning/15 text-warning",
+  lunas: "bg-success/15 text-success",
 };
 
 export const StatusBadge = ({ status }: { status: string }) => (
