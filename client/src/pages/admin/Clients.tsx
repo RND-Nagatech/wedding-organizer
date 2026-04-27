@@ -1,13 +1,16 @@
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { clients, formatDate, packages } from "@/lib/mockData";
-import { Plus, Search, Mail, Phone } from "lucide-react";
+import { formatDate } from "@/lib/mockData";
+import { useClients, usePackages } from "@/lib/dataStore";
+import { Search, Mail, Phone } from "lucide-react";
 import { useState } from "react";
+import { AddClientDialog } from "@/components/dialogs/AddClientDialog";
 
 const Clients = () => {
+  const clients = useClients();
+  const packages = usePackages();
   const [q, setQ] = useState("");
   const filtered = clients.filter(
     (c) => c.name.toLowerCase().includes(q.toLowerCase()) || c.partner.toLowerCase().includes(q.toLowerCase())
@@ -18,11 +21,7 @@ const Clients = () => {
       <PageHeader
         title="Manajemen Klien"
         subtitle={`${clients.length} pasangan terdaftar`}
-        actions={
-          <Button className="bg-primary hover:bg-primary/90">
-            <Plus className="w-4 h-4 mr-1.5" /> Tambah Klien
-          </Button>
-        }
+        actions={<AddClientDialog />}
       />
 
       <div className="relative mb-5 max-w-sm">
@@ -49,11 +48,11 @@ const Clients = () => {
               <div className="mt-4 pt-4 border-t border-border flex items-end justify-between">
                 <div>
                   <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Hari-H</div>
-                  <div className="font-display text-base">{formatDate(c.weddingDate)}</div>
+                  <div className="font-display text-base">{c.weddingDate ? formatDate(c.weddingDate) : "-"}</div>
                 </div>
                 <div className="text-right">
                   <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Paket</div>
-                  <div className="text-sm font-medium text-primary">{pkg?.name}</div>
+                  <div className="text-sm font-medium text-primary">{pkg?.name ?? "-"}</div>
                 </div>
               </div>
             </Card>
