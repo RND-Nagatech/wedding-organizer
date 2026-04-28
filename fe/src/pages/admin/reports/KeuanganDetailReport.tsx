@@ -91,9 +91,9 @@ const KeuanganDetailReport = () => {
                         Tanggal: String(r.tgl_trx || ""),
                         Kategori: titleCaseWords(String(r.kategori || "")),
                         Keterangan: String(r.keterangan || ""),
-                        "Jumlah In": Number(r.jumlah_in ?? 0),
-                        "Jumlah Out": Number(r.jumlah_out ?? 0),
-                        "Saldo Berjalan": Number(r.saldo_berjalan ?? 0),
+                        "Jumlah In": formatIDR(Number(r.jumlah_in ?? 0)),
+                        "Jumlah Out": formatIDR(Number(r.jumlah_out ?? 0)),
+                        "Saldo Berjalan": formatIDR(Number(r.saldo_berjalan ?? 0)),
                       })),
                     });
                     toast.success("Export Excel berhasil");
@@ -117,9 +117,9 @@ const KeuanganDetailReport = () => {
                         String(r.tgl_trx || ""),
                         titleCaseWords(String(r.kategori || "")),
                         String(r.keterangan || ""),
-                        String(r.jumlah_in ?? 0),
-                        String(r.jumlah_out ?? 0),
-                        String(r.saldo_berjalan ?? 0),
+                        formatIDR(Number(r.jumlah_in ?? 0)),
+                        formatIDR(Number(r.jumlah_out ?? 0)),
+                        formatIDR(Number(r.saldo_berjalan ?? 0)),
                       ]),
                     });
                     toast.success("Export PDF berhasil");

@@ -73,9 +73,9 @@ const KeuanganRekapReport = () => {
                       sheetName: "Keuangan Rekap",
                       rows: (data?.data || []).map((r: any) => ({
                         Kategori: titleCaseWords(String(r.kategori || "")),
-                        "Total In": Number(r.total_in ?? 0),
-                        "Total Out": Number(r.total_out ?? 0),
-                        Saldo: Number(r.saldo ?? 0),
+                        "Total In": formatIDR(Number(r.total_in ?? 0)),
+                        "Total Out": formatIDR(Number(r.total_out ?? 0)),
+                        Saldo: formatIDR(Number(r.saldo ?? 0)),
                       })),
                     });
                     toast.success("Export Excel berhasil");
@@ -96,9 +96,9 @@ const KeuanganRekapReport = () => {
                       columns: ["Kategori", "Total In", "Total Out", "Saldo"],
                       rows: (data?.data || []).map((r: any) => [
                         titleCaseWords(String(r.kategori || "")),
-                        String(r.total_in ?? 0),
-                        String(r.total_out ?? 0),
-                        String(r.saldo ?? 0),
+                        formatIDR(Number(r.total_in ?? 0)),
+                        formatIDR(Number(r.total_out ?? 0)),
+                        formatIDR(Number(r.saldo ?? 0)),
                       ]),
                     });
                     toast.success("Export PDF berhasil");
