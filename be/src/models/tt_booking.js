@@ -10,7 +10,17 @@ const TtBookingSchema = new mongoose.Schema({
   adat_id: { type: mongoose.Schema.Types.ObjectId, ref: "tm_adat", index: true },
   pic: { type: String, trim: true },
   status_event: { type: String, enum: ["draft", "aktif", "selesai", "batal"], default: "draft", index: true },
+  status_review: { type: String, enum: ["menunggu_review", "approved", "rejected"], default: "menunggu_review", index: true },
   catatan: { type: String, trim: true },
+  // preferensi katalog client (snapshot-friendly)
+  preferensi_katalog: {
+    baju_id: { type: mongoose.Schema.Types.ObjectId, ref: "tm_katalog_baju" },
+    dekorasi_id: { type: mongoose.Schema.Types.ObjectId, ref: "tm_katalog_dekorasi" },
+    makeup_id: { type: mongoose.Schema.Types.ObjectId, ref: "tm_katalog_makeup" },
+    baju_snapshot: { type: Object },
+    dekorasi_snapshot: { type: Object },
+    makeup_snapshot: { type: Object },
+  },
 
   // Backward-compat (existing)
   id_klien: { type: String, required: true },

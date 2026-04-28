@@ -222,6 +222,23 @@ export async function updateVendorBooking(id: string, data: any) {
   return res.json();
 }
 
+// Formulir Digital Client (tt_formulir_digital)
+export async function ambilFormulirDigitalByBooking(kode_booking: string) {
+  const res = await fetch(`${API_BASE}/tt_formulir_digital/by-booking/${encodeURIComponent(kode_booking)}`);
+  if (!res.ok) throw new Error("Gagal mengambil formulir digital");
+  return res.json();
+}
+
+export async function upsertFormulirDigital(payload: any) {
+  const res = await fetch(`${API_BASE}/tt_formulir_digital`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error("Gagal menyimpan formulir digital");
+  return res.json();
+}
+
 // Referensi client (tt_referensi_client)
 export async function ambilReferensiClient(params?: { kode_booking?: string; kategori?: string; status?: string }) {
   const qs = params ? `?${new URLSearchParams(params as any).toString()}` : "";
@@ -456,6 +473,14 @@ export async function editTimelineEvent(id: string, data: any) {
 export async function hapusTimelineEvent(id: string) {
   const res = await fetch(`${API_BASE}/tt_timeline_event/${id}`, { method: "DELETE" });
   if (!res.ok) throw new Error("Gagal menghapus timeline event");
+  return res.json();
+}
+
+// Timeline Client (tt_timeline_client)
+export async function ambilTimelineClient(params?: { kode_booking?: string }) {
+  const qs = params ? `?${new URLSearchParams(params as any).toString()}` : "";
+  const res = await fetch(`${API_BASE}/tt_timeline_client${qs}`);
+  if (!res.ok) throw new Error("Gagal mengambil timeline client");
   return res.json();
 }
 

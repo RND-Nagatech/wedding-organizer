@@ -1,0 +1,287 @@
+import { PageHeader } from "@/components/PageHeader";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { useAuth } from "@/contexts/AuthContext";
+import { useBookings } from "@/lib/dataStore";
+import { ambilFormulirDigitalByBooking, upsertFormulirDigital } from "@/lib/api";
+import { toast } from "sonner";
+import { useEffect, useMemo, useState } from "react";
+import { Download, Save } from "lucide-react";
+
+async function exportFormToPdf(opts: { kode_booking: string; data: any }) {
+  const { default: jsPDF } = await import("jspdf");
+  const doc = new jsPDF({ orientation: "portrait" });
+  const marginX = 14;
+  let y = 14;
+  doc.setFontSize(14);
+  doc.text("Formulir Digital Acara", marginX, y);
+  y += 8;
+  doc.setFontSize(10);
+  doc.text(`Booking: ${String(opts.kode_booking || "").toUpperCase()}`, marginX, y);
+  y += 8;
+
+  const lines: Array<[string, string]> = [
+    ["Nama Pengantin Pria", opts.data.nama_pengantin_pria],
+    ["Nama Pengantin Wanita", opts.data.nama_pengantin_wanita],
+    ["Orang Tua Pria", opts.data.nama_orang_tua_pria],
+    ["Orang Tua Wanita", opts.data.nama_orang_tua_wanita],
+    ["Wali", opts.data.nama_wali],
+    ["Saksi 1", opts.data.nama_saksi_1],
+    ["Saksi 2", opts.data.nama_saksi_2],
+    ["MC", opts.data.nama_MC],
+    ["Penghulu/Pemuka Agama", opts.data.nama_penghulu],
+    ["Lokasi Akad", opts.data.lokasi_akad],
+    ["Jam Akad", opts.data.jam_akad],
+    ["Lokasi Resepsi", opts.data.lokasi_resepsi],
+    ["Jam Resepsi", opts.data.jam_resepsi],
+    ["Adat/Konsep", opts.data.adat_konsep],
+    ["Warna Tema", opts.data.warna_tema],
+    ["Jumlah Tamu", String(opts.data.jumlah_tamu || "")],
+    ["Request Lagu", opts.data.request_lagu],
+    ["Request Makanan", opts.data.request_makanan],
+    ["Catatan Khusus", opts.data.catatan_khusus],
+    ["Susunan Acara", opts.data.susunan_acara],
+  ];
+
+  for (const [k, v] of lines) {
+    const val = (v || "—").toString();
+    const text = `${k}: ${val}`;
+    const wrapped = doc.splitTextToSize(text, 180);
+    doc.text(wrapped, marginX, y);
+    y += wrapped.length * 5 + 1;
+    if (y > 270) {
+      doc.addPage();
+      y = 14;
+    }
+  }
+
+  doc.save(`formulir-${String(opts.kode_booking || "").toLowerCase()}.pdf`);
+}
+
+const kategoriJamPlaceholder = "contoh: 08:00";
+
+export default function DigitalForm() {
+  const { user } = useAuth();
+  const bookings = useBookings();
+  const booking = useMemo(() => bookings.find((b) => b.clientId === (user?.clientId || "")), [bookings, user?.clientId]);
+  const kodeBooking = String(booking?.code || "");
+
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [form, setForm] = useState<any>({
+    kode_booking: "",
+    nama_pengantin_pria: "",
+    nama_pengantin_wanita: "",
+    nama_orang_tua_pria: "",
+    nama_orang_tua_wanita: "",
+    nama_wali: "",
+    nama_saksi_1: "",
+    nama_saksi_2: "",
+    nama_MC: "",
+    nama_penghulu: "",
+    lokasi_akad: "",
+    jam_akad: "",
+    lokasi_resepsi: "",
+    jam_resepsi: "",
+    adat_konsep: "",
+    warna_tema: "",
+    jumlah_tamu: "",
+    request_lagu: "",
+    request_makanan: "",
+    catatan_khusus: "",
+    susunan_acara: "",
+  });
+
+  useEffect(() => {
+    if (!kodeBooking) return;
+    (async () => {
+      try {
+        setLoading(true);
+        const data = await ambilFormulirDigitalByBooking(kodeBooking);
+        if (data && data.kode_booking) {
+          setForm((f: any) => ({ ...f, ...data }));
+        } else {
+          setForm((f: any) => ({ ...f, kode_booking: kodeBooking }));
+        }
+      } catch {
+        setForm((f: any) => ({ ...f, kode_booking: kodeBooking }));
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [kodeBooking]);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const next: Record<string, string> = {};
+    if (!form.kode_booking) next.kode_booking = "Kode booking wajib ada";
+    if (!form.nama_pengantin_pria) next.nama_pengantin_pria = "Nama pengantin pria wajib diisi";
+    if (!form.nama_pengantin_wanita) next.nama_pengantin_wanita = "Nama pengantin wanita wajib diisi";
+    setErrors(next);
+    if (Object.keys(next).length) {
+      toast.error("Lengkapi field yang wajib diisi");
+      return;
+    }
+    try {
+      setSaving(true);
+      await upsertFormulirDigital(form);
+      toast.success("Formulir berhasil disimpan");
+    } catch (err: any) {
+      toast.error(err?.message || "Gagal menyimpan formulir");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <>
+      <PageHeader
+        title="Formulir Digital Acara"
+        subtitle={kodeBooking ? kodeBooking.toUpperCase() : "Belum ada booking"}
+        actions={
+          <Button
+            variant="outline"
+            disabled={!kodeBooking || loading}
+            onClick={() => exportFormToPdf({ kode_booking: kodeBooking, data: form })}
+          >
+            <Download className="w-4 h-4 mr-1.5" /> Export PDF
+          </Button>
+        }
+      />
+
+      <Card className="border-border shadow-soft p-6">
+        {!kodeBooking ? (
+          <div className="text-sm text-muted-foreground">Buat booking terlebih dahulu.</div>
+        ) : loading ? (
+          <div className="text-sm text-muted-foreground">Memuat data...</div>
+        ) : (
+          <form className="space-y-4" onSubmit={submit}>
+            <div className="space-y-1.5">
+              <Label>Kode Booking</Label>
+              <Input value={form.kode_booking} disabled />
+              {errors.kode_booking ? <div className="text-xs text-destructive">{errors.kode_booking}</div> : null}
+            </div>
+
+            <div className="grid sm:grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Nama Pengantin Pria</Label>
+                <Input value={form.nama_pengantin_pria} onChange={(e) => setForm((f: any) => ({ ...f, nama_pengantin_pria: e.target.value }))} />
+                {errors.nama_pengantin_pria ? <div className="text-xs text-destructive">{errors.nama_pengantin_pria}</div> : null}
+              </div>
+              <div className="space-y-1.5">
+                <Label>Nama Pengantin Wanita</Label>
+                <Input value={form.nama_pengantin_wanita} onChange={(e) => setForm((f: any) => ({ ...f, nama_pengantin_wanita: e.target.value }))} />
+                {errors.nama_pengantin_wanita ? <div className="text-xs text-destructive">{errors.nama_pengantin_wanita}</div> : null}
+              </div>
+            </div>
+
+            <div className="grid sm:grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Nama Orang Tua Pria</Label>
+                <Input value={form.nama_orang_tua_pria} onChange={(e) => setForm((f: any) => ({ ...f, nama_orang_tua_pria: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Nama Orang Tua Wanita</Label>
+                <Input value={form.nama_orang_tua_wanita} onChange={(e) => setForm((f: any) => ({ ...f, nama_orang_tua_wanita: e.target.value }))} />
+              </div>
+            </div>
+
+            <div className="grid sm:grid-cols-3 gap-3">
+              <div className="space-y-1.5">
+                <Label>Wali</Label>
+                <Input value={form.nama_wali} onChange={(e) => setForm((f: any) => ({ ...f, nama_wali: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Saksi 1</Label>
+                <Input value={form.nama_saksi_1} onChange={(e) => setForm((f: any) => ({ ...f, nama_saksi_1: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Saksi 2</Label>
+                <Input value={form.nama_saksi_2} onChange={(e) => setForm((f: any) => ({ ...f, nama_saksi_2: e.target.value }))} />
+              </div>
+            </div>
+
+            <div className="grid sm:grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>MC</Label>
+                <Input value={form.nama_MC} onChange={(e) => setForm((f: any) => ({ ...f, nama_MC: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Penghulu / Pemuka Agama</Label>
+                <Input value={form.nama_penghulu} onChange={(e) => setForm((f: any) => ({ ...f, nama_penghulu: e.target.value }))} />
+              </div>
+            </div>
+
+            <div className="grid sm:grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Lokasi Akad</Label>
+                <Input value={form.lokasi_akad} onChange={(e) => setForm((f: any) => ({ ...f, lokasi_akad: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Jam Akad</Label>
+                <Input value={form.jam_akad} onChange={(e) => setForm((f: any) => ({ ...f, jam_akad: e.target.value }))} placeholder={kategoriJamPlaceholder} />
+              </div>
+            </div>
+
+            <div className="grid sm:grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Lokasi Resepsi</Label>
+                <Input value={form.lokasi_resepsi} onChange={(e) => setForm((f: any) => ({ ...f, lokasi_resepsi: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Jam Resepsi</Label>
+                <Input value={form.jam_resepsi} onChange={(e) => setForm((f: any) => ({ ...f, jam_resepsi: e.target.value }))} placeholder={kategoriJamPlaceholder} />
+              </div>
+            </div>
+
+            <div className="grid sm:grid-cols-3 gap-3">
+              <div className="space-y-1.5">
+                <Label>Adat / Konsep</Label>
+                <Input value={form.adat_konsep} onChange={(e) => setForm((f: any) => ({ ...f, adat_konsep: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Warna Tema</Label>
+                <Input value={form.warna_tema} onChange={(e) => setForm((f: any) => ({ ...f, warna_tema: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Jumlah Tamu</Label>
+                <Input type="number" value={form.jumlah_tamu} onChange={(e) => setForm((f: any) => ({ ...f, jumlah_tamu: e.target.value }))} />
+              </div>
+            </div>
+
+            <div className="grid sm:grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Request Lagu</Label>
+                <Input value={form.request_lagu} onChange={(e) => setForm((f: any) => ({ ...f, request_lagu: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Request Makanan</Label>
+                <Input value={form.request_makanan} onChange={(e) => setForm((f: any) => ({ ...f, request_makanan: e.target.value }))} />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Catatan Khusus</Label>
+              <Textarea value={form.catatan_khusus} onChange={(e) => setForm((f: any) => ({ ...f, catatan_khusus: e.target.value }))} />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Susunan Acara / Rundown Sementara</Label>
+              <Textarea rows={6} value={form.susunan_acara} onChange={(e) => setForm((f: any) => ({ ...f, susunan_acara: e.target.value }))} />
+            </div>
+
+            <div className="flex justify-end">
+              <Button type="submit" className="bg-primary hover:bg-primary/90" disabled={saving}>
+                <Save className="w-4 h-4 mr-1.5" /> {saving ? "Menyimpan..." : "Simpan"}
+              </Button>
+            </div>
+          </form>
+        )}
+      </Card>
+    </>
+  );
+}

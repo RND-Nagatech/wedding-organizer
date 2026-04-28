@@ -30,7 +30,12 @@ const adminNav: NavItem[] = [
       { to: "/admin/clients", label: "Klien", icon: Users, perm: "clients" },
     ]
   },
-  { to: "/admin/bookings", label: "Booking", icon: CalendarDays, perm: "bookings" },
+  { to: "/admin/bookings", label: "Booking", icon: CalendarDays, perm: "bookings",
+    submenu: [
+      { to: "/admin/bookings", label: "List Booking", icon: CalendarDays },
+      { to: "/admin/booking-review", label: "Review Booking", icon: CalendarDays },
+    ]
+  },
   { to: "/admin/timeline", label: "Timeline", icon: ListChecks, perm: "timeline" },
   // { to: "/admin/invoices", label: "Invoice", icon: Receipt, perm: "invoices" },
   { to: "/admin/payments", label: "Pembayaran", icon: Receipt, perm: "payments" },
@@ -60,6 +65,10 @@ const clientNav: NavItem[] = [
   { to: "/client", label: "Beranda", icon: LayoutDashboard, end: true },
   { to: "/client/packages", label: "Pilih Paket", icon: Package },
   { to: "/client/booking", label: "Booking Saya", icon: CalendarDays },
+  { to: "/client/catalog-baju", label: "Katalog Baju", icon: ListChecks },
+  { to: "/client/catalog-dekorasi", label: "Katalog Dekorasi", icon: ListChecks },
+  { to: "/client/catalog-makeup", label: "Katalog Makeup", icon: ListChecks },
+  { to: "/client/formulir", label: "Formulir Acara", icon: ListChecks },
   { to: "/client/references", label: "Referensi", icon: ListChecks },
   { to: "/client/wishlist", label: "Wishlist", icon: ListChecks },
   { to: "/client/timeline", label: "Timeline", icon: ListChecks },

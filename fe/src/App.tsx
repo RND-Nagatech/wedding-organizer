@@ -19,6 +19,7 @@ import Vendors from "./pages/admin/Vendors";
 import Packages from "./pages/admin/Packages";
 import VendorCategories from "./pages/admin/VendorCategories";
 import Bookings from "./pages/admin/Bookings";
+import BookingReview from "./pages/admin/BookingReview";
 import Timeline from "./pages/admin/Timeline";
 import Invoices from "./pages/admin/Invoices";
 import Payments from "./pages/admin/Payments";
@@ -48,6 +49,10 @@ import ClientInvoices from "./pages/client/ClientInvoices";
 import ClientPayments from "./pages/client/ClientPayments";
 import ClientReferences from "./pages/client/References";
 import ClientWishlist from "./pages/client/Wishlist";
+import ClientCatalogBaju from "./pages/client/ClientCatalogBaju";
+import ClientCatalogDekorasi from "./pages/client/ClientCatalogDekorasi";
+import ClientCatalogMakeup from "./pages/client/ClientCatalogMakeup";
+import DigitalForm from "./pages/client/DigitalForm";
 
 const queryClient = new QueryClient();
 
@@ -86,6 +91,7 @@ const App = () => (
                         <Route path="crew" element={<CrewAssignments />} />
                         <Route path="keuangan" element={<Keuangan />} />
                         <Route path="bookings" element={<RequirePermission permission="bookings"><Bookings /></RequirePermission>} />
+                        <Route path="booking-review" element={<RequirePermission permission="bookings"><BookingReview /></RequirePermission>} />
                         <Route path="timeline" element={<RequirePermission permission="timeline"><Timeline /></RequirePermission>} />
                         {/* <Route path="invoices" element={<RequirePermission permission="invoices"><Invoices /></RequirePermission>} /> */}
                         <Route path="payments" element={<RequirePermission permission="payments"><Payments /></RequirePermission>} />
@@ -113,6 +119,10 @@ const App = () => (
                         <Route index element={<ClientHome />} />
                         <Route path="packages" element={<ClientPackages />} />
                         <Route path="booking" element={<ClientBooking />} />
+                        <Route path="catalog-baju" element={<ClientCatalogBaju />} />
+                        <Route path="catalog-dekorasi" element={<ClientCatalogDekorasi />} />
+                        <Route path="catalog-makeup" element={<ClientCatalogMakeup />} />
+                        <Route path="formulir" element={<DigitalForm />} />
                         <Route path="references" element={<ClientReferences />} />
                         <Route path="wishlist" element={<ClientWishlist />} />
                         <Route path="timeline" element={<ClientTimeline />} />

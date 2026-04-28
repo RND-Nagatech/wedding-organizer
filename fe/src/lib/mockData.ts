@@ -64,6 +64,7 @@ export type Package = {
   price: number;
   features: string[];
   vendorIds?: string[]; // vendor yang boleh masuk paket
+  vendorByCategory?: { kategoriVendorId: string; vendorIds: string[] }[]; // flow baru: vendor dipilih per kategori
   popular?: boolean;
 };
 
@@ -80,8 +81,19 @@ export type Booking = {
   adatId?: string;
   pic?: string;
   eventStatus?: "draft" | "aktif" | "selesai" | "batal";
+  reviewStatus?: "menunggu_review" | "approved" | "rejected";
   note?: string;
   vendorSelectedIds?: string[];
+  preferensiKatalog?: {
+    bajuId?: string;
+    dekorasiId?: string;
+    makeupId?: string;
+  };
+  preferensiKatalogSnapshot?: {
+    baju?: any;
+    dekorasi?: any;
+    makeup?: any;
+  };
   packageSnapshot?: {
     name?: string;
     tagline?: string;

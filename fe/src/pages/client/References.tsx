@@ -172,16 +172,19 @@ function AddReferenceDialog({ trigger }: { trigger: React.ReactNode }) {
 
 const ClientReferences = () => {
   const { user } = useAuth();
+  const bookings = useBookings();
   const list = useReferensiClient();
 
   const rows = useMemo(() => {
     if (!user?.clientId) return list;
-    return list.filter((r) => {
-      // Best-effort filter: kode_booking milik clientId akan difilter di server idealnya.
-      // MVP: tampilkan semua jika data booking tidak terhubung ke auth.
-      return true;
-    });
-  }, [list, user?.clientId]);
+    const myCodes = new Set(
+      bookings
+        .filter((b) => b.clientId === user.clientId)
+        .map((b) => String(b.code || "").toLowerCase())
+        .filter(Boolean)
+    );
+    return list.filter((r) => myCodes.has(String(r.kode_booking || "").toLowerCase()));
+  }, [list, bookings, user?.clientId]);
 
   return (
     <>
@@ -266,4 +269,3 @@ const ClientReferences = () => {
 };
 
 export default ClientReferences;
-

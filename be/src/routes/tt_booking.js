@@ -4,6 +4,11 @@ import TmClient from "../models/tm_client.js";
 import TmPackage from "../models/tm_package.js";
 import TmVendor from "../models/tm_vendor.js";
 import TtVendorBooking from "../models/tt_vendor_booking.js";
+import TmKatalogBaju from "../models/tm_katalog_baju.js";
+import TmKatalogDekorasi from "../models/tm_katalog_dekorasi.js";
+import TmKatalogMakeup from "../models/tm_katalog_makeup.js";
+import TtTimelineClient from "../models/tt_timeline_client.js";
+import TtTimelineEvent from "../models/tt_timeline_event.js";
 import { generateDailyCode } from "../utils/code.js";
 
 const router = express.Router();
@@ -29,6 +34,16 @@ function vendorStatusFromEventStatus(status_event) {
   if (status_event === "batal") return "batal";
   if (status_event === "aktif") return "booked";
   return "hold"; // draft
+}
+
+function addDaysISO(isoDate, days) {
+  try {
+    const d = new Date(`${isoDate}T00:00:00`);
+    d.setDate(d.getDate() + days);
+    return d.toISOString().slice(0, 10);
+  } catch {
+    return isoDate;
+  }
 }
 
 // GET available vendors for a package & date
@@ -74,9 +89,11 @@ router.post("/", async (req, res) => {
       paket_id,
       lokasi_acara,
       status_event,
+      status_review,
       adat_id,
       pic,
       catatan,
+      preferensi_katalog,
 
       // Backward compat payload
       id_klien = client_id,
@@ -137,6 +154,15 @@ router.post("/", async (req, res) => {
       ? await TmVendor.find({ _id: { $in: selectedVendorIds } })
       : [];
 
+    // snapshot preferensi katalog (agar riwayat tidak berubah jika master diedit)
+    let pref = preferensi_katalog || {};
+    const bajuId = pref?.baju_id ? String(pref.baju_id) : null;
+    const dekorasiId = pref?.dekorasi_id ? String(pref.dekorasi_id) : null;
+    const makeupId = pref?.makeup_id ? String(pref.makeup_id) : null;
+    const bajuDoc = bajuId ? await TmKatalogBaju.findById(bajuId) : null;
+    const dekorDoc = dekorasiId ? await TmKatalogDekorasi.findById(dekorasiId) : null;
+    const makeupDoc = makeupId ? await TmKatalogMakeup.findById(makeupId) : null;
+
     const booking = new TtBooking({
       kode_booking,
       kode_client: client.kode_client,
@@ -148,7 +174,22 @@ router.post("/", async (req, res) => {
       adat_id: adat_id || undefined,
       pic,
       status_event: status_event || "draft",
+      status_review: status_review || "menunggu_review",
       catatan,
+      preferensi_katalog: {
+        baju_id: bajuId || undefined,
+        dekorasi_id: dekorasiId || undefined,
+        makeup_id: makeupId || undefined,
+        baju_snapshot: bajuDoc
+          ? { nama_baju: bajuDoc.nama_baju, kategori: bajuDoc.kategori, adat_id: bajuDoc.adat_id, model: bajuDoc.model, warna: bajuDoc.warna, ukuran: bajuDoc.ukuran, foto: bajuDoc.foto, status: bajuDoc.status, catatan: bajuDoc.catatan }
+          : undefined,
+        dekorasi_snapshot: dekorDoc
+          ? { nama_dekorasi: dekorDoc.nama_dekorasi, tema: dekorDoc.tema, adat_id: dekorDoc.adat_id, warna_dominan: dekorDoc.warna_dominan, vendor_id: dekorDoc.vendor_id, harga: dekorDoc.harga, foto: dekorDoc.foto, catatan: dekorDoc.catatan, status: dekorDoc.status }
+          : undefined,
+        makeup_snapshot: makeupDoc
+          ? { nama_style: makeupDoc.nama_style, kategori: makeupDoc.kategori, vendor_mua_id: makeupDoc.vendor_mua_id, foto: makeupDoc.foto, harga: makeupDoc.harga, catatan: makeupDoc.catatan, status: makeupDoc.status }
+          : undefined,
+      },
       paket_snapshot: {
         nama_paket: paket.nama_paket,
         tagline: paket.tagline,
@@ -201,17 +242,20 @@ router.put("/:id", async (req, res) => {
   try {
     const booking = await TtBooking.findById(req.params.id);
     if (!booking) return res.status(404).json({ pesan: "Booking tidak ditemukan" });
+    const prevReviewStatus = booking.status_review;
 
     const {
       // Tahap 5
       tanggal_acara,
       lokasi_acara,
       status_event,
+      status_review,
       adat_id,
       pic,
       catatan,
       client_id,
       paket_id,
+      preferensi_katalog,
 
       // Backward compat
       status,
@@ -239,9 +283,33 @@ router.put("/:id", async (req, res) => {
     if (typeof tamu !== "undefined") booking.tamu = tamu;
     if (typeof status !== "undefined") booking.status = status;
     if (typeof status_event !== "undefined") booking.status_event = status_event;
+    if (typeof status_review !== "undefined") booking.status_review = status_review;
     if (typeof adat_id !== "undefined") booking.adat_id = adat_id || undefined;
     if (typeof pic !== "undefined") booking.pic = pic;
     if (typeof catatan !== "undefined") booking.catatan = catatan;
+    if (typeof preferensi_katalog !== "undefined") {
+      const pref = preferensi_katalog || {};
+      const bajuId = pref?.baju_id ? String(pref.baju_id) : null;
+      const dekorasiId = pref?.dekorasi_id ? String(pref.dekorasi_id) : null;
+      const makeupId = pref?.makeup_id ? String(pref.makeup_id) : null;
+      const bajuDoc = bajuId ? await TmKatalogBaju.findById(bajuId) : null;
+      const dekorDoc = dekorasiId ? await TmKatalogDekorasi.findById(dekorasiId) : null;
+      const makeupDoc = makeupId ? await TmKatalogMakeup.findById(makeupId) : null;
+      booking.preferensi_katalog = {
+        baju_id: bajuId || undefined,
+        dekorasi_id: dekorasiId || undefined,
+        makeup_id: makeupId || undefined,
+        baju_snapshot: bajuDoc
+          ? { nama_baju: bajuDoc.nama_baju, kategori: bajuDoc.kategori, adat_id: bajuDoc.adat_id, model: bajuDoc.model, warna: bajuDoc.warna, ukuran: bajuDoc.ukuran, foto: bajuDoc.foto, status: bajuDoc.status, catatan: bajuDoc.catatan }
+          : undefined,
+        dekorasi_snapshot: dekorDoc
+          ? { nama_dekorasi: dekorDoc.nama_dekorasi, tema: dekorDoc.tema, adat_id: dekorDoc.adat_id, warna_dominan: dekorDoc.warna_dominan, vendor_id: dekorDoc.vendor_id, harga: dekorDoc.harga, foto: dekorDoc.foto, catatan: dekorDoc.catatan, status: dekorDoc.status }
+          : undefined,
+        makeup_snapshot: makeupDoc
+          ? { nama_style: makeupDoc.nama_style, kategori: makeupDoc.kategori, vendor_mua_id: makeupDoc.vendor_mua_id, foto: makeupDoc.foto, harga: makeupDoc.harga, catatan: makeupDoc.catatan, status: makeupDoc.status }
+          : undefined,
+      };
+    }
 
     if (typeof client_id !== "undefined" || typeof id_klien !== "undefined") {
       const newClientId = String(client_id || id_klien);
@@ -284,6 +352,43 @@ router.put("/:id", async (req, res) => {
     }
 
     await booking.save();
+
+    // On approval: generate default timelines (client + internal) if not exists
+    if (
+      typeof status_review !== "undefined" &&
+      prevReviewStatus !== "approved" &&
+      booking.status_review === "approved" &&
+      booking.kode_booking
+    ) {
+      const kode = String(booking.kode_booking);
+      const clientCount = await TtTimelineClient.countDocuments({ kode_booking: kode });
+      if (clientCount === 0) {
+        await TtTimelineClient.insertMany([
+          { kode_booking: kode, urutan: 1, nama_step: "konsultasi" },
+          { kode_booking: kode, urutan: 2, nama_step: "pilih paket" },
+          { kode_booking: kode, urutan: 3, nama_step: "pilih konsep/adat" },
+          { kode_booking: kode, urutan: 4, nama_step: "finalisasi desain" },
+          { kode_booking: kode, urutan: 5, nama_step: "pembayaran DP" },
+          { kode_booking: kode, urutan: 6, nama_step: "technical meeting" },
+          { kode_booking: kode, urutan: 7, nama_step: "pelunasan" },
+          { kode_booking: kode, urutan: 8, nama_step: "hari H" },
+        ]);
+      }
+
+      const internalCount = await TtTimelineEvent.countDocuments({ kode_booking: kode });
+      if (internalCount === 0) {
+        const eventDate = String(booking.tanggal_acara);
+        await TtTimelineEvent.insertMany([
+          { kode_booking: kode, nama_tugas: "cek availability vendor", kategori_tugas: "vendor", deadline: addDaysISO(eventDate, -30) },
+          { kode_booking: kode, nama_tugas: "hubungi vendor", kategori_tugas: "vendor", deadline: addDaysISO(eventDate, -28) },
+          { kode_booking: kode, nama_tugas: "finalisasi dekorasi", kategori_tugas: "operasional", deadline: addDaysISO(eventDate, -14) },
+          { kode_booking: kode, nama_tugas: "fitting baju", kategori_tugas: "operasional", deadline: addDaysISO(eventDate, -10) },
+          { kode_booking: kode, nama_tugas: "assign crew", kategori_tugas: "crew", deadline: addDaysISO(eventDate, -7) },
+          { kode_booking: kode, nama_tugas: "checklist barang", kategori_tugas: "barang", deadline: addDaysISO(eventDate, -2) },
+          { kode_booking: kode, nama_tugas: "rundown final", kategori_tugas: "rundown", deadline: addDaysISO(eventDate, -1) },
+        ]);
+      }
+    }
 
     if (typeof vendor_dipilih_ids !== "undefined") {
       const paket = await TmPackage.findById(String(booking.id_paket));

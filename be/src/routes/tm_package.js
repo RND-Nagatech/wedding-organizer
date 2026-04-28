@@ -3,6 +3,20 @@ import TmPackage from "../models/tm_package.js";
 
 const router = express.Router();
 
+function uniqStrings(arr) {
+  return Array.from(new Set((Array.isArray(arr) ? arr : []).map(String).filter(Boolean)));
+}
+
+function normalizeKategoriVendors(input) {
+  const rows = Array.isArray(input) ? input : [];
+  return rows
+    .map((r) => ({
+      kategori_vendor_id: r?.kategori_vendor_id ? String(r.kategori_vendor_id) : "",
+      vendor_ids: uniqStrings(r?.vendor_ids || []),
+    }))
+    .filter((r) => r.kategori_vendor_id);
+}
+
 // GET semua paket
 router.get("/", async (req, res) => {
   try {
@@ -27,7 +41,18 @@ router.get("/:id", async (req, res) => {
 // POST tambah paket
 router.post("/", async (req, res) => {
   try {
-    const paket = new TmPackage(req.body);
+    const body = req.body || {};
+    const kategori_vendors = normalizeKategoriVendors(body.kategori_vendors);
+    const vendorUnion = uniqStrings([
+      ...(body.vendor_ids || []),
+      ...kategori_vendors.flatMap((x) => x.vendor_ids),
+    ]);
+
+    const paket = new TmPackage({
+      ...body,
+      kategori_vendors,
+      vendor_ids: vendorUnion,
+    });
     await paket.save();
     res.status(201).json(paket);
   } catch (err) {
@@ -38,7 +63,26 @@ router.post("/", async (req, res) => {
 // PUT edit paket
 router.put("/:id", async (req, res) => {
   try {
-    const paket = await TmPackage.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+    const body = req.body || {};
+    const kategori_vendors = typeof body.kategori_vendors !== "undefined"
+      ? normalizeKategoriVendors(body.kategori_vendors)
+      : undefined;
+
+    let vendorUnion;
+    if (typeof kategori_vendors !== "undefined") {
+      vendorUnion = uniqStrings([
+        ...(body.vendor_ids || []),
+        ...kategori_vendors.flatMap((x) => x.vendor_ids),
+      ]);
+    }
+
+    const payload = {
+      ...body,
+      ...(typeof kategori_vendors !== "undefined" ? { kategori_vendors } : {}),
+      ...(typeof vendorUnion !== "undefined" ? { vendor_ids: vendorUnion } : {}),
+    };
+
+    const paket = await TmPackage.findByIdAndUpdate(req.params.id, payload, { new: true, runValidators: true });
     if (!paket) return res.status(404).json({ pesan: "Paket tidak ditemukan" });
     res.json(paket);
   } catch (err) {

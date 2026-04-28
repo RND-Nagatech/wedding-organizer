@@ -57,6 +57,8 @@ import ttTimelineEventRouter from "./routes/tt_timeline_event.js";
 import ttKeuanganRouter from "./routes/tt_keuangan.js";
 import reportsRouter from "./routes/reports.js";
 import authRouter from "./routes/auth.js";
+import ttFormulirDigitalRouter from "./routes/tt_formulir_digital.js";
+import ttTimelineClientRouter from "./routes/tt_timeline_client.js";
 import tpSystemRouter from "./routes/tp_system.js";
 app.use("/api/tp_system", tpSystemRouter);
 
@@ -85,6 +87,8 @@ app.use("/api/tt_timeline_event", ttTimelineEventRouter);
 app.use("/api/tt_keuangan", ttKeuanganRouter);
 app.use("/api/reports", reportsRouter);
 app.use("/api/auth", authRouter);
+app.use("/api/tt_formulir_digital", ttFormulirDigitalRouter);
+app.use("/api/tt_timeline_client", ttTimelineClientRouter);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {

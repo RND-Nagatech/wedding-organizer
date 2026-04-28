@@ -147,12 +147,24 @@ function AddWishlistDialog({ trigger }: { trigger: React.ReactNode }) {
 }
 
 const ClientWishlist = () => {
+  const { user } = useAuth();
+  const bookings = useBookings();
   const list = useWishlistClient();
+  const rows = useMemo(() => {
+    if (!user?.clientId) return list;
+    const myCodes = new Set(
+      bookings
+        .filter((b) => b.clientId === user.clientId)
+        .map((b) => String(b.code || "").toLowerCase())
+        .filter(Boolean)
+    );
+    return list.filter((r) => myCodes.has(String(r.kode_booking || "").toLowerCase()));
+  }, [list, bookings, user?.clientId]);
   return (
     <>
       <PageHeader
         title="Wishlist Saya"
-        subtitle={`${list.length} item`}
+        subtitle={`${rows.length} item`}
         actions={
           <AddWishlistDialog
             trigger={
@@ -178,7 +190,7 @@ const ClientWishlist = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {list.map((r) => (
+              {rows.map((r) => (
                 <TableRow key={r.id}>
                   <TableCell className="font-medium">{(r.kode_booking || "—").toUpperCase()}</TableCell>
                   <TableCell>{r.kategori}</TableCell>
@@ -207,7 +219,7 @@ const ClientWishlist = () => {
                   </TableCell>
                 </TableRow>
               ))}
-              {list.length === 0 ? (
+              {rows.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                     Belum ada wishlist
@@ -223,4 +235,3 @@ const ClientWishlist = () => {
 };
 
 export default ClientWishlist;
-
