@@ -530,21 +530,40 @@ export async function hapusKeuangan(id: string) {
 
 // Tahap 13: Reports
 export async function reportEvents(params?: { tgl_from?: string; tgl_to?: string; status_event?: string; paket_id?: string; pic?: string }) {
-  const qs = params ? `?${new URLSearchParams(params as any).toString()}` : "";
+  // Hanya kirim field yang defined dan bukan string 'undefined'
+  const cleanParams: Record<string, string> = {};
+  if (params) {
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== "undefined") cleanParams[k] = v;
+    });
+  }
+  const qs = Object.keys(cleanParams).length ? `?${new URLSearchParams(cleanParams).toString()}` : "";
   const res = await fetch(`${API_BASE}/reports/events${qs}`);
   if (!res.ok) throw new Error("Gagal mengambil laporan event");
   return res.json();
 }
 
 export async function reportPayments(params?: { tgl_from?: string; tgl_to?: string; status?: string; kode_client?: string }) {
-  const qs = params ? `?${new URLSearchParams(params as any).toString()}` : "";
+  const cleanParams: Record<string, string> = {};
+  if (params) {
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== "undefined") cleanParams[k] = v;
+    });
+  }
+  const qs = Object.keys(cleanParams).length ? `?${new URLSearchParams(cleanParams).toString()}` : "";
   const res = await fetch(`${API_BASE}/reports/payments${qs}`);
   if (!res.ok) throw new Error("Gagal mengambil laporan pembayaran");
   return res.json();
 }
 
 export async function reportKeuanganDetail(params?: { tgl_from?: string; tgl_to?: string; kategori?: string }) {
-  const qs = params ? `?${new URLSearchParams(params as any).toString()}` : "";
+  const cleanParams: Record<string, string> = {};
+  if (params) {
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== "undefined") cleanParams[k] = v;
+    });
+  }
+  const qs = Object.keys(cleanParams).length ? `?${new URLSearchParams(cleanParams).toString()}` : "";
   const res = await fetch(`${API_BASE}/reports/keuangan-detail${qs}`);
   if (!res.ok) throw new Error("Gagal mengambil laporan keuangan detail");
   return res.json();
