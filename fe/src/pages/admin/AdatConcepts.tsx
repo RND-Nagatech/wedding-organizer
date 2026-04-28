@@ -12,6 +12,7 @@ import { store, useAdat, type AdatConcept } from "@/lib/dataStore";
 import { toast } from "sonner";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { statusLabel } from "@/lib/labels";
 
 function AdatFormDialog({
   mode,
@@ -189,7 +190,7 @@ const AdatConcepts = () => {
                     {a.deskripsi ? <div className="text-xs text-muted-foreground line-clamp-1">{a.deskripsi}</div> : null}
                   </TableCell>
                   <TableCell>{a.warna_tema || "—"}</TableCell>
-                  <TableCell className="capitalize">{a.status}</TableCell>
+                  <TableCell>{statusLabel(String(a.status || ""))}</TableCell>
                   <TableCell className="text-right">
                     <div className="inline-flex gap-2">
                       <AdatFormDialog
@@ -239,4 +240,3 @@ const AdatConcepts = () => {
 };
 
 export default AdatConcepts;
-

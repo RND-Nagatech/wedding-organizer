@@ -10,11 +10,18 @@ import { Download } from "lucide-react";
 import { formatIDR } from "@/lib/mockData";
 import { exportToExcel, exportToPdf } from "@/lib/exporters";
 import { reportKeuanganRekap } from "@/lib/api";
+import { titleCaseWords } from "@/lib/labels";
 
 const KeuanganRekapReport = () => {
-  const today = new Date().toISOString().slice(0, 10);
-  const [from, setFrom] = useState(today);
-  const [to, setTo] = useState(today);
+  const today = new Date();
+  const toISO = (d: Date) => d.toISOString().slice(0, 10);
+  const defaultTo = toISO(today);
+  const dFrom = new Date(today);
+  dFrom.setDate(dFrom.getDate() - 30);
+  const defaultFrom = toISO(dFrom);
+
+  const [from, setFrom] = useState(defaultFrom);
+  const [to, setTo] = useState(defaultTo);
   const [data, setData] = useState<any>({ data: [], summary: null });
   const [loading, setLoading] = useState(false);
 
@@ -61,7 +68,16 @@ const KeuanganRekapReport = () => {
                 variant="outline"
                 onClick={async () => {
                   try {
-                    await exportToExcel({ filename: "laporan-keuangan-rekap.xlsx", sheetName: "KeuanganRekap", rows: data?.data || [] });
+                    await exportToExcel({
+                      filename: "laporan-keuangan-rekap.xlsx",
+                      sheetName: "Keuangan Rekap",
+                      rows: (data?.data || []).map((r: any) => ({
+                        Kategori: titleCaseWords(String(r.kategori || "")),
+                        "Total In": Number(r.total_in ?? 0),
+                        "Total Out": Number(r.total_out ?? 0),
+                        Saldo: Number(r.saldo ?? 0),
+                      })),
+                    });
                     toast.success("Export Excel berhasil");
                   } catch (err: any) {
                     toast.error(err?.message || "Gagal export Excel");
@@ -77,9 +93,9 @@ const KeuanganRekapReport = () => {
                     await exportToPdf({
                       filename: "laporan-keuangan-rekap.pdf",
                       title: "Laporan Keuangan Rekap",
-                      columns: ["kategori", "total_in", "total_out", "saldo"],
+                      columns: ["Kategori", "Total In", "Total Out", "Saldo"],
                       rows: (data?.data || []).map((r: any) => [
-                        String(r.kategori || ""),
+                        titleCaseWords(String(r.kategori || "")),
                         String(r.total_in ?? 0),
                         String(r.total_out ?? 0),
                         String(r.saldo ?? 0),
@@ -113,7 +129,7 @@ const KeuanganRekapReport = () => {
             </Card>
           </div>
 
-          <Table>
+          <Table className="border border-border">
             <TableHeader>
               <TableRow>
                 <TableHead>Kategori</TableHead>
@@ -125,7 +141,7 @@ const KeuanganRekapReport = () => {
             <TableBody>
               {(data?.data || []).map((r: any, idx: number) => (
                 <TableRow key={idx}>
-                  <TableCell className="font-medium">{r.kategori}</TableCell>
+                  <TableCell className="font-medium">{r.kategori ? titleCaseWords(r.kategori) : "—"}</TableCell>
                   <TableCell className="text-right">{formatIDR(Number(r.total_in) || 0)}</TableCell>
                   <TableCell className="text-right">{formatIDR(Number(r.total_out) || 0)}</TableCell>
                   <TableCell className="text-right font-medium text-primary">{formatIDR(Number(r.saldo) || 0)}</TableCell>
@@ -147,4 +163,3 @@ const KeuanganRekapReport = () => {
 };
 
 export default KeuanganRekapReport;
-

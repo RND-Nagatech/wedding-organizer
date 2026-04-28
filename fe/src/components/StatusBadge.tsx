@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { statusLabel } from "@/lib/labels";
 
 const variants: Record<string, string> = {
   Booked: "bg-primary-soft text-primary",
@@ -28,6 +29,6 @@ export const StatusBadge = ({ status }: { status: string }) => (
       variants[status] || "bg-muted text-muted-foreground"
     )}
   >
-    {status}
+    {statusLabel(status)}
   </span>
 );

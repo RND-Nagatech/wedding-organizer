@@ -15,6 +15,7 @@ import { useEffect, useState } from "react";
 import { uploadGambar } from "@/lib/api";
 import { formatIDR } from "@/lib/mockData";
 import { RupiahInput } from "@/components/RupiahInput";
+import { statusLabel } from "@/lib/labels";
 
 const API_ORIGIN = (import.meta.env.VITE_API_URL || "http://localhost:5001/api").replace(/\/api\/?$/, "");
 
@@ -296,7 +297,7 @@ const CatalogDekorasiPage = () => {
                   <TableCell>{d.adat_nama || adat.find((a) => a.id === d.adat_id)?.nama_adat || "—"}</TableCell>
                   <TableCell>{d.vendor_nama || "—"}</TableCell>
                   <TableCell className="text-right">{formatIDR(d.harga || 0)}</TableCell>
-                  <TableCell className="capitalize">{d.status}</TableCell>
+                  <TableCell>{statusLabel(String(d.status || ""))}</TableCell>
                   <TableCell className="text-right">
                     <div className="inline-flex gap-2">
                       <DekorasiFormDialog

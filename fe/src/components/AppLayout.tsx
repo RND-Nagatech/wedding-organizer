@@ -15,31 +15,52 @@ type NavItem = { to: string; label: string; icon: any; end?: boolean; perm?: Per
 const adminNav: NavItem[] = [
   { to: "/admin", label: "Dashboard", icon: LayoutDashboard, end: true, perm: "dashboard" },
   {
-    to: "/admin/master", label: "Master", icon: Settings, submenu: [
+    to: "/admin/master-data",
+    label: "Master Data",
+    icon: Settings,
+    submenu: [
       { to: "/admin/vendor-categories", label: "Kategori Vendor", icon: ListChecks },
-      { to: "/admin/vendors", label: "Vendor", icon: Store, perm: "vendors" },
-      { to: "/admin/packages", label: "Paket", icon: Package, perm: "packages" },
+      { to: "/admin/vendors", label: "Master Vendor", icon: Store, perm: "vendors" },
+      { to: "/admin/packages", label: "Master Paket", icon: Package, perm: "packages" },
       { to: "/admin/adat", label: "Adat / Konsep", icon: ListChecks },
       { to: "/admin/catalog-baju", label: "Katalog Baju", icon: Package },
       { to: "/admin/catalog-dekorasi", label: "Katalog Dekorasi", icon: Package },
       { to: "/admin/catalog-makeup", label: "Katalog Makeup", icon: Package },
+      { to: "/admin/clients", label: "Klien", icon: Users, perm: "clients" },
+    ],
+  },
+  {
+    to: "/admin/projects",
+    label: "Project Management",
+    icon: CalendarDays,
+    perm: "bookings",
+    submenu: [
+      { to: "/admin/projects", label: "Active Weddings", icon: CalendarDays },
+      { to: "/admin/bookings", label: "List Booking", icon: CalendarDays },
+      { to: "/admin/timeline", label: "Timeline WO", icon: ListChecks, perm: "timeline" },
+    ]
+  },
+  {
+    to: "/admin/resources",
+    label: "Resource Management",
+    icon: ListChecks,
+    submenu: [
+      { to: "/admin/crew", label: "Crew Assignment", icon: ListChecks },
+      { to: "/admin/checklist-barang", label: "Checklist Barang/Aset", icon: ListChecks },
       { to: "/admin/client-references", label: "Referensi Client", icon: ListChecks },
       { to: "/admin/client-wishlist", label: "Wishlist Client", icon: ListChecks },
-      { to: "/admin/checklist-barang", label: "Checklist Barang", icon: ListChecks },
-      { to: "/admin/crew", label: "Crew Assignment", icon: ListChecks },
-      { to: "/admin/clients", label: "Klien", icon: Users, perm: "clients" },
-    ]
+    ],
   },
-  { to: "/admin/bookings", label: "Booking", icon: CalendarDays, perm: "bookings",
+  {
+    to: "/admin/finance",
+    label: "Keuangan",
+    icon: Receipt,
+    perm: "reports",
     submenu: [
-      { to: "/admin/bookings", label: "List Booking", icon: CalendarDays },
-      { to: "/admin/booking-review", label: "Review Booking", icon: CalendarDays },
-    ]
+      { to: "/admin/payments", label: "Pembayaran Client", icon: Receipt, perm: "payments" },
+      { to: "/admin/keuangan", label: "Transaksi Keuangan", icon: Receipt, perm: "reports" },
+    ],
   },
-  { to: "/admin/timeline", label: "Timeline", icon: ListChecks, perm: "timeline" },
-  // { to: "/admin/invoices", label: "Invoice", icon: Receipt, perm: "invoices" },
-  { to: "/admin/payments", label: "Pembayaran", icon: Receipt, perm: "payments" },
-  { to: "/admin/keuangan", label: "Keuangan", icon: Receipt, perm: "reports" },
   {
     to: "/admin/reports",
     label: "Laporan",
@@ -53,7 +74,7 @@ const adminNav: NavItem[] = [
     ],
   },
   {
-    to: "/admin/settings", label: "Pengaturan", icon: Settings, perm: "settings",
+    to: "/admin/user-management", label: "Pengaturan", icon: Users, perm: "settings",
     submenu: [
       { to: "/admin/settings/users", label: "Manajemen User", icon: Users },
       { to: "/admin/settings/profile", label: "Profil Bisnis", icon: Heart },
@@ -62,18 +83,37 @@ const adminNav: NavItem[] = [
 ];
 
 const clientNav: NavItem[] = [
-  { to: "/client", label: "Beranda", icon: LayoutDashboard, end: true },
-  { to: "/client/packages", label: "Pilih Paket", icon: Package },
-  { to: "/client/booking", label: "Booking Saya", icon: CalendarDays },
-  { to: "/client/catalog-baju", label: "Katalog Baju", icon: ListChecks },
-  { to: "/client/catalog-dekorasi", label: "Katalog Dekorasi", icon: ListChecks },
-  { to: "/client/catalog-makeup", label: "Katalog Makeup", icon: ListChecks },
-  { to: "/client/formulir", label: "Formulir Acara", icon: ListChecks },
-  { to: "/client/references", label: "Referensi", icon: ListChecks },
-  { to: "/client/wishlist", label: "Wishlist", icon: ListChecks },
-  { to: "/client/timeline", label: "Timeline", icon: ListChecks },
-  // { to: "/client/invoices", label: "Invoice", icon: Receipt },
-  { to: "/client/payments", label: "Pembayaran", icon: Receipt },
+  { to: "/client", label: "Home", icon: LayoutDashboard, end: true },
+  {
+    to: "/client/planning",
+    label: "My Planning",
+    icon: CalendarDays,
+    submenu: [
+      { to: "/client/packages", label: "Pilih Paket", icon: Package },
+      { to: "/client/booking", label: "Booking", icon: CalendarDays },
+      { to: "/client/timeline", label: "Timeline", icon: ListChecks },
+    ],
+  },
+  {
+    to: "/client/preferences",
+    label: "My Preferences",
+    icon: Heart,
+    submenu: [
+      { to: "/client/catalog-baju", label: "Katalog Baju", icon: ListChecks },
+      { to: "/client/catalog-dekorasi", label: "Katalog Dekorasi", icon: ListChecks },
+      { to: "/client/catalog-makeup", label: "Katalog Makeup", icon: ListChecks },
+      { to: "/client/references", label: "Upload Referensi", icon: ListChecks },
+      { to: "/client/wishlist", label: "Wishlist", icon: ListChecks },
+    ],
+  },
+  { to: "/client/formulir", label: "Digital Form", icon: ListChecks },
+  {
+    to: "/client/budget",
+    label: "Budget & Payment",
+    icon: Receipt,
+    submenu: [{ to: "/client/payments", label: "Pembayaran", icon: Receipt }],
+  },
+  { to: "/client/guests", label: "My Guests", icon: Users },
 ];
 
 export const AppLayout = ({ children }: { children: React.ReactNode }) => {

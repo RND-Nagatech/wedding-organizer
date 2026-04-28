@@ -14,10 +14,12 @@ export const PaymentFormDialog = ({
   mode,
   initial,
   trigger,
+  fixedKodeBooking,
 }: {
   mode: "add" | "edit";
   initial?: Payment;
   trigger: React.ReactNode;
+  fixedKodeBooking?: string;
 }) => {
   const bookings = useBookings();
   const clients = useClients();
@@ -42,7 +44,7 @@ export const PaymentFormDialog = ({
     if (!open) return;
     const firstCode = bookingOptions[0]?.code || "";
     setForm({
-      kode_booking: initial?.bookingCode ?? firstCode,
+      kode_booking: fixedKodeBooking || (initial?.bookingCode ?? firstCode),
       nominal_bayar: initial?.amountPaid ?? 0,
       metode_pembayaran: initial?.method ?? "transfer",
       tanggal_pembayaran: initial?.paidDate ?? new Date().toISOString().slice(0, 10),
@@ -50,7 +52,7 @@ export const PaymentFormDialog = ({
       catatan: initial?.note ?? "",
     });
     setErrors({});
-  }, [open, bookingOptions, initial]);
+  }, [open, bookingOptions, initial, fixedKodeBooking]);
 
   const booking = bookings.find((b) => b.code === form.kode_booking);
   const client = clients.find((c) => c.id === booking?.clientId);
@@ -119,7 +121,7 @@ export const PaymentFormDialog = ({
             <Select
               value={form.kode_booking}
               onValueChange={(v) => setForm((f: any) => ({ ...f, kode_booking: v }))}
-              disabled={saving || mode === "edit"}
+              disabled={saving || mode === "edit" || Boolean(fixedKodeBooking)}
             >
               <SelectTrigger><SelectValue placeholder="Pilih booking" /></SelectTrigger>
               <SelectContent>

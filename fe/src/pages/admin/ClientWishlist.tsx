@@ -12,6 +12,7 @@ import { store, useBookings, useWishlistClient, type ClientWishlist } from "@/li
 import { toast } from "sonner";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { statusLabel } from "@/lib/labels";
 
 const kategoriOptions: ClientWishlist["kategori"][] = ["baju", "dekorasi", "makeup", "aksesori", "rundown", "makanan", "lainnya"];
 const prioritasOptions: ClientWishlist["prioritas"][] = ["rendah", "sedang", "tinggi"];
@@ -150,7 +151,7 @@ function WishlistFormDialog({
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {prioritasOptions.map((p) => (
-                    <SelectItem key={p} value={p}>{p}</SelectItem>
+                    <SelectItem key={p} value={p}>{statusLabel(String(p))}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -161,7 +162,7 @@ function WishlistFormDialog({
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {statusOptions.map((s) => (
-                    <SelectItem key={s} value={s}>{s}</SelectItem>
+                    <SelectItem key={s} value={s}>{statusLabel(String(s))}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -312,7 +313,7 @@ const ClientWishlistPage = () => {
                   <TableCell className="font-medium">{(r.kode_booking || "—").toUpperCase()}</TableCell>
                   <TableCell>{r.kategori}</TableCell>
                   <TableCell className="capitalize">{r.prioritas}</TableCell>
-                  <TableCell className="capitalize">{r.status}</TableCell>
+                  <TableCell>{statusLabel(String(r.status || ""))}</TableCell>
                   <TableCell className="max-w-[420px] truncate">{r.permintaan}</TableCell>
                   <TableCell>{r.pic || "—"}</TableCell>
                   <TableCell className="text-right">
@@ -364,4 +365,3 @@ const ClientWishlistPage = () => {
 };
 
 export default ClientWishlistPage;
-

@@ -3,7 +3,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatDate, formatIDR } from "@/lib/mockData";
-import { Heart, CalendarHeart, Receipt, ListChecks, ArrowRight } from "lucide-react";
+import { Heart, Receipt, ListChecks, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useBookings, useChecklist, useClients, useInvoices, usePackages } from "@/lib/dataStore";
 
@@ -24,8 +24,9 @@ const ClientHome = () => {
   const doneTasks = tasks.filter((t) => t.done).length;
 
   const today = new Date();
-  const wedDate = new Date(client?.weddingDate || new Date().toISOString().slice(0, 10));
-  const daysToGo = Math.max(0, Math.ceil((wedDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)));
+  const eventDateStr = booking?.eventDate || client?.weddingDate || new Date().toISOString().slice(0, 10);
+  const eventDate = new Date(eventDateStr);
+  const daysToGo = Math.max(0, Math.ceil((eventDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)));
 
   return (
     <>
@@ -40,7 +41,7 @@ const ClientHome = () => {
           <h1 className="font-display text-4xl lg:text-6xl mt-3">
             {client?.name || "—"} <em className="text-primary">&</em> {client?.partner || "—"}
           </h1>
-          <div className="mt-4 text-muted-foreground">{client?.weddingDate ? formatDate(client.weddingDate) : "—"}</div>
+          <div className="mt-4 text-muted-foreground">{eventDateStr ? formatDate(eventDateStr) : "—"}</div>
 
           <div className="mt-8 flex items-end gap-4">
             <div className="font-display text-7xl lg:text-8xl text-primary leading-none">{daysToGo}</div>
@@ -81,7 +82,7 @@ const ClientHome = () => {
           </Card>
         </Link>
 
-        <Link to="/client/invoices">
+        <Link to="/client/payments">
           <Card className="p-6 border-border shadow-soft hover:shadow-elegant transition-smooth h-full bg-gradient-card group">
             <div className="flex items-center justify-between mb-4">
               <div className="w-11 h-11 rounded-xl bg-success/15 flex items-center justify-center">

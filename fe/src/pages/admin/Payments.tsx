@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { useMemo, useState } from "react";
+import { statusLabel } from "@/lib/labels";
 
 const Payments = ({
   filterClientCode,
@@ -49,7 +50,21 @@ const Payments = ({
   });
 
   const totalPaid = list.reduce((s, p) => s + p.amountPaid, 0);
-  const totalRemaining = list.reduce((s, p) => s + p.remaining, 0);
+  // Sisa tagihan dihitung per booking: ambil sisa terakhir dari masing-masing kode_booking (bukan akumulasi semua transaksi)
+  const latestRemainingByBooking = useMemo(() => {
+    const map = new Map<string, { paidDate: string; remaining: number }>();
+    for (const p of list) {
+      const kb = String(p.bookingCode || "");
+      if (!kb) continue;
+      const cur = map.get(kb);
+      const nextDate = String(p.paidDate || "");
+      if (!cur || nextDate > cur.paidDate) {
+        map.set(kb, { paidDate: nextDate, remaining: Number(p.remaining) || 0 });
+      }
+    }
+    return map;
+  }, [list]);
+  const totalRemaining = Array.from(latestRemainingByBooking.values()).reduce((s, x) => s + (Number(x.remaining) || 0), 0);
 
   return (
     <>
@@ -76,7 +91,7 @@ const Payments = ({
           <div className="font-display text-3xl text-success mt-2">{formatIDR(totalPaid)}</div>
         </Card>
         <Card className="p-5 border-border shadow-soft bg-gradient-card">
-          <div className="text-xs uppercase tracking-wider text-muted-foreground">Sisa Tagihan (akumulasi)</div>
+          <div className="text-xs uppercase tracking-wider text-muted-foreground">Sisa Tagihan (per booking)</div>
           <div className="font-display text-3xl text-primary mt-2">{formatIDR(totalRemaining)}</div>
         </Card>
       </div>
@@ -106,11 +121,11 @@ const Payments = ({
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Semua</SelectItem>
-                  <SelectItem value="DP">DP</SelectItem>
-                  <SelectItem value="cicilan">cicilan</SelectItem>
-                  <SelectItem value="lunas">lunas</SelectItem>
-                  <SelectItem value="belum_bayar">belum_bayar</SelectItem>
-                  <SelectItem value="belum bayar">belum bayar</SelectItem>
+                  <SelectItem value="DP">{statusLabel("DP")}</SelectItem>
+                  <SelectItem value="cicilan">{statusLabel("cicilan")}</SelectItem>
+                  <SelectItem value="lunas">{statusLabel("lunas")}</SelectItem>
+                  <SelectItem value="belum_bayar">{statusLabel("belum_bayar")}</SelectItem>
+                  <SelectItem value="belum bayar">{statusLabel("belum bayar")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>

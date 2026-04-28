@@ -3,7 +3,8 @@ import { Input } from "@/components/ui/input";
 
 function formatRupiah(value: number) {
   if (!Number.isFinite(value)) return "";
-  return new Intl.NumberFormat("id-ID").format(Math.max(0, Math.trunc(value)));
+  const n = Math.max(0, Math.trunc(value));
+  return `Rp ${new Intl.NumberFormat("id-ID").format(n)}`;
 }
 
 function parseRupiah(raw: string) {
@@ -22,12 +23,10 @@ export function RupiahInput(props: {
   const { value, onValueChange, disabled, placeholder, name } = props;
   const formatted = useMemo(() => formatRupiah(value), [value]);
   const [text, setText] = useState(formatted);
-  const [focused, setFocused] = useState(false);
 
   useEffect(() => {
-    if (focused) return;
     setText(formatted);
-  }, [formatted, focused]);
+  }, [formatted]);
 
   return (
     <Input
@@ -35,21 +34,13 @@ export function RupiahInput(props: {
       inputMode="numeric"
       placeholder={placeholder || "0"}
       disabled={disabled}
-      value={focused ? text : formatted}
-      onFocus={() => {
-        setFocused(true);
-        setText(formatted);
-      }}
-      onBlur={() => {
-        setFocused(false);
-        setText(formatRupiah(value));
-      }}
+      value={text}
       onChange={(e) => {
         const raw = e.target.value;
-        setText(raw);
-        onValueChange(parseRupiah(raw));
+        const next = parseRupiah(raw);
+        onValueChange(next);
+        setText(formatRupiah(next));
       }}
     />
   );
 }
-

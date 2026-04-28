@@ -12,14 +12,21 @@ import { formatDate } from "@/lib/mockData";
 import { usePackages } from "@/lib/dataStore";
 import { exportToExcel, exportToPdf } from "@/lib/exporters";
 import { reportEvents } from "@/lib/api";
+import { statusLabel } from "@/lib/labels";
 
 const EventReport = () => {
   const packages = usePackages();
   const paketOptions = useMemo(() => packages.map((p) => ({ id: p.id, name: p.name })), [packages]);
 
-  const today = new Date().toISOString().slice(0, 10);
-  const [evtFrom, setEvtFrom] = useState(today);
-  const [evtTo, setEvtTo] = useState(today);
+  const today = new Date();
+  const toISO = (d: Date) => d.toISOString().slice(0, 10);
+  const defaultTo = toISO(today);
+  const dFrom = new Date(today);
+  dFrom.setDate(dFrom.getDate() - 30);
+  const defaultFrom = toISO(dFrom);
+
+  const [evtFrom, setEvtFrom] = useState(defaultFrom);
+  const [evtTo, setEvtTo] = useState(defaultTo);
   const [evtStatus, setEvtStatus] = useState("all");
   const [evtPaket, setEvtPaket] = useState("all");
   const [evtPic, setEvtPic] = useState("");
@@ -100,7 +107,20 @@ const EventReport = () => {
                 variant="outline"
                 onClick={async () => {
                   try {
-                    await exportToExcel({ filename: "laporan-event.xlsx", sheetName: "Event", rows });
+                    await exportToExcel({
+                      filename: "laporan-event.xlsx",
+                      sheetName: "Event",
+                      rows: rows.map((r) => ({
+                        "Kode Booking": String(r.kode_booking || "").toUpperCase(),
+                        "Kode Client": String(r.kode_client || ""),
+                        "Nama Client": String(r.nama_client || ""),
+                        "Tanggal Acara": String(r.tanggal_acara || ""),
+                        Paket: String(r.paket || ""),
+                        "Status Event": statusLabel(String(r.status_event || "")),
+                        "Progress (%)": Number(r.progress_percent ?? 0),
+                        PIC: String(r.pic || ""),
+                      })),
+                    });
                     toast.success("Export Excel berhasil");
                   } catch (err: any) {
                     toast.error(err?.message || "Gagal export Excel");
@@ -116,15 +136,15 @@ const EventReport = () => {
                     await exportToPdf({
                       filename: "laporan-event.pdf",
                       title: "Laporan Event",
-                      columns: ["kode_booking", "kode_client", "nama_client", "tanggal_acara", "paket", "status_event", "progress_percent", "pic"],
+                      columns: ["Kode Booking", "Kode Client", "Nama Client", "Tanggal Acara", "Paket", "Status Event", "Progress (%)", "PIC"],
                       rows: rows.map((r) => [
-                        String(r.kode_booking || ""),
+                        String(r.kode_booking || "").toUpperCase(),
                         String(r.kode_client || ""),
                         String(r.nama_client || ""),
                         String(r.tanggal_acara || ""),
                         String(r.paket || ""),
-                        String(r.status_event || ""),
-                        String(r.progress_percent ?? ""),
+                        statusLabel(String(r.status_event || "")),
+                        String(r.progress_percent ?? 0),
                         String(r.pic || ""),
                       ]),
                     });
@@ -141,7 +161,7 @@ const EventReport = () => {
         </div>
 
         <div className="p-4 overflow-x-auto">
-          <Table>
+          <Table className="border border-border">
             <TableHeader>
               <TableRow>
                 <TableHead>Kode Booking</TableHead>
@@ -162,7 +182,7 @@ const EventReport = () => {
                   <TableCell>{r.nama_client || "—"}</TableCell>
                   <TableCell>{r.tanggal_acara ? formatDate(r.tanggal_acara) : "—"}</TableCell>
                   <TableCell>{r.paket || "—"}</TableCell>
-                  <TableCell className="capitalize">{r.status_event || "—"}</TableCell>
+                  <TableCell>{r.status_event ? statusLabel(r.status_event) : "—"}</TableCell>
                   <TableCell className="text-right font-medium text-primary">{r.progress_percent ?? 0}%</TableCell>
                   <TableCell>{r.pic || "—"}</TableCell>
                 </TableRow>
@@ -183,4 +203,3 @@ const EventReport = () => {
 };
 
 export default EventReport;
-

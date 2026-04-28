@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { Pencil, Plus, Trash2, Image as ImageIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { uploadGambar } from "@/lib/api";
+import { statusLabel } from "@/lib/labels";
 
 const API_ORIGIN = (import.meta.env.VITE_API_URL || "http://localhost:5001/api").replace(/\/api\/?$/, "");
 
@@ -288,7 +289,7 @@ const CatalogBajuPage = () => {
                   </TableCell>
                   <TableCell className="capitalize">{b.kategori}</TableCell>
                   <TableCell>{b.adat_nama || adat.find((a) => a.id === b.adat_id)?.nama_adat || "—"}</TableCell>
-                  <TableCell className="capitalize">{b.status}</TableCell>
+                  <TableCell>{statusLabel(String(b.status || ""))}</TableCell>
                   <TableCell className="text-right">
                     <div className="inline-flex gap-2">
                       <CatalogBajuFormDialog

@@ -2,10 +2,12 @@ import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBookings } from "@/lib/dataStore";
-import { ambilTimelineClient } from "@/lib/api";
+import { ambilTimelineClient, updateTimelineClient } from "@/lib/api";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { CheckCircle2, Circle, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { statusLabel } from "@/lib/labels";
 
 export default function ClientTimeline() {
   const { user } = useAuth();
@@ -15,6 +17,7 @@ export default function ClientTimeline() {
 
   const [loading, setLoading] = useState(false);
   const [steps, setSteps] = useState<any[]>([]);
+  const [savingIds, setSavingIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!kodeBooking) return;
@@ -52,18 +55,38 @@ export default function ClientTimeline() {
           <ol className="space-y-3">
             {steps.map((s) => {
               const done = s.status === "selesai";
+              const id = String(s._id || s.id);
+              const saving = savingIds.has(id);
               return (
-                <li key={String(s._id || s.id)} className="flex items-start gap-3">
+                <li key={id} className="flex items-start gap-3">
                   <div className="mt-0.5">
-                    {done ? (
-                      <CheckCircle2 className="w-5 h-5 text-primary" />
-                    ) : (
-                      <Circle className="w-5 h-5 text-muted-foreground" />
-                    )}
+                    <Checkbox
+                      checked={done}
+                      disabled={saving}
+                      onCheckedChange={async (val) => {
+                        const nextDone = Boolean(val);
+                        const nextStatus = nextDone ? "selesai" : "belum_dikerjakan";
+                        try {
+                          setSavingIds((prev) => new Set([...Array.from(prev), id]));
+                          setSteps((prev) => prev.map((x) => (String(x._id || x.id) === id ? { ...x, status: nextStatus } : x)));
+                          await updateTimelineClient(id, { status: nextStatus });
+                          toast.success("Checklist tersimpan");
+                        } catch (err: any) {
+                          setSteps((prev) => prev.map((x) => (String(x._id || x.id) === id ? { ...x, status: s.status } : x)));
+                          toast.error(err?.message || "Gagal menyimpan checklist");
+                        } finally {
+                          setSavingIds((prev) => {
+                            const next = new Set(prev);
+                            next.delete(id);
+                            return next;
+                          });
+                        }
+                      }}
+                    />
                   </div>
                   <div className="min-w-0">
                     <div className="font-medium capitalize">{String(s.nama_step || "").replace(/_/g, " ")}</div>
-                    <div className="text-xs text-muted-foreground capitalize">{s.status}</div>
+                    <div className="text-xs text-muted-foreground">{statusLabel(String(s.status || ""))}</div>
                   </div>
                 </li>
               );
@@ -74,4 +97,3 @@ export default function ClientTimeline() {
     </>
   );
 }
-

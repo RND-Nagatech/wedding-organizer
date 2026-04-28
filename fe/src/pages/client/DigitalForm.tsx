@@ -9,7 +9,7 @@ import { useBookings } from "@/lib/dataStore";
 import { ambilFormulirDigitalByBooking, upsertFormulirDigital } from "@/lib/api";
 import { toast } from "sonner";
 import { useEffect, useMemo, useState } from "react";
-import { Download, Save } from "lucide-react";
+import { Download, Save, Pencil } from "lucide-react";
 
 async function exportFormToPdf(opts: { kode_booking: string; data: any }) {
   const { default: jsPDF } = await import("jspdf");
@@ -71,6 +71,7 @@ export default function DigitalForm() {
 
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [readOnly, setReadOnly] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [form, setForm] = useState<any>({
     kode_booking: "",
@@ -104,11 +105,14 @@ export default function DigitalForm() {
         const data = await ambilFormulirDigitalByBooking(kodeBooking);
         if (data && data.kode_booking) {
           setForm((f: any) => ({ ...f, ...data }));
+          setReadOnly(true);
         } else {
           setForm((f: any) => ({ ...f, kode_booking: kodeBooking }));
+          setReadOnly(false);
         }
       } catch {
         setForm((f: any) => ({ ...f, kode_booking: kodeBooking }));
+        setReadOnly(false);
       } finally {
         setLoading(false);
       }
@@ -130,6 +134,7 @@ export default function DigitalForm() {
       setSaving(true);
       await upsertFormulirDigital(form);
       toast.success("Formulir berhasil disimpan");
+      setReadOnly(true);
     } catch (err: any) {
       toast.error(err?.message || "Gagal menyimpan formulir");
     } finally {
@@ -143,13 +148,20 @@ export default function DigitalForm() {
         title="Formulir Digital Acara"
         subtitle={kodeBooking ? kodeBooking.toUpperCase() : "Belum ada booking"}
         actions={
-          <Button
-            variant="outline"
-            disabled={!kodeBooking || loading}
-            onClick={() => exportFormToPdf({ kode_booking: kodeBooking, data: form })}
-          >
-            <Download className="w-4 h-4 mr-1.5" /> Export PDF
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              disabled={!kodeBooking || loading}
+              onClick={() => exportFormToPdf({ kode_booking: kodeBooking, data: form })}
+            >
+              <Download className="w-4 h-4 mr-1.5" /> Export PDF
+            </Button>
+            {readOnly ? (
+              <Button variant="outline" onClick={() => setReadOnly(false)} disabled={loading || saving}>
+                <Pencil className="w-4 h-4 mr-1.5" /> Edit
+              </Button>
+            ) : null}
+          </div>
         }
       />
 
@@ -158,6 +170,49 @@ export default function DigitalForm() {
           <div className="text-sm text-muted-foreground">Buat booking terlebih dahulu.</div>
         ) : loading ? (
           <div className="text-sm text-muted-foreground">Memuat data...</div>
+        ) : readOnly ? (
+          <div className="space-y-4">
+            <div className="rounded-lg border border-border p-4 bg-muted/10">
+              <div className="text-xs uppercase tracking-wider text-muted-foreground">Hasil Form</div>
+              <div className="text-sm text-muted-foreground mt-1">Form tersimpan. Klik Edit bila ingin mengubah.</div>
+            </div>
+
+            <div className="grid sm:grid-cols-2 gap-3 text-sm">
+              {[
+                ["Nama Pengantin Pria", form.nama_pengantin_pria],
+                ["Nama Pengantin Wanita", form.nama_pengantin_wanita],
+                ["Nama Orang Tua Pria", form.nama_orang_tua_pria],
+                ["Nama Orang Tua Wanita", form.nama_orang_tua_wanita],
+                ["Wali", form.nama_wali],
+                ["Saksi 1", form.nama_saksi_1],
+                ["Saksi 2", form.nama_saksi_2],
+                ["MC", form.nama_MC],
+                ["Penghulu/Pemuka Agama", form.nama_penghulu],
+                ["Lokasi Akad", form.lokasi_akad],
+                ["Jam Akad", form.jam_akad],
+                ["Lokasi Resepsi", form.lokasi_resepsi],
+                ["Jam Resepsi", form.jam_resepsi],
+                ["Adat/Konsep", form.adat_konsep],
+                ["Warna Tema", form.warna_tema],
+                ["Jumlah Tamu", form.jumlah_tamu],
+                ["Request Lagu", form.request_lagu],
+                ["Request Makanan", form.request_makanan],
+              ].map(([label, value]) => (
+                <div key={String(label)} className="rounded-lg border border-border p-3 bg-background">
+                  <div className="text-xs text-muted-foreground">{label}</div>
+                  <div className="font-medium mt-1 whitespace-pre-wrap">{value || "—"}</div>
+                </div>
+              ))}
+              <div className="sm:col-span-2 rounded-lg border border-border p-3 bg-background">
+                <div className="text-xs text-muted-foreground">Catatan Khusus</div>
+                <div className="font-medium mt-1 whitespace-pre-wrap">{form.catatan_khusus || "—"}</div>
+              </div>
+              <div className="sm:col-span-2 rounded-lg border border-border p-3 bg-background">
+                <div className="text-xs text-muted-foreground">Susunan Acara / Rundown Sementara</div>
+                <div className="font-medium mt-1 whitespace-pre-wrap">{form.susunan_acara || "—"}</div>
+              </div>
+            </div>
+          </div>
         ) : (
           <form className="space-y-4" onSubmit={submit}>
             <div className="space-y-1.5">

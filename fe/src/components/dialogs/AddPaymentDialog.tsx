@@ -8,6 +8,7 @@ import { Plus } from "lucide-react";
 import { store, useBookings, useClients, usePackages, usePayments } from "@/lib/dataStore";
 import { toast } from "sonner";
 import { formatIDR } from "@/lib/mockData";
+import { RupiahInput } from "@/components/RupiahInput";
 
 export const AddPaymentDialog = () => {
   const bookings = useBookings();
@@ -138,12 +139,7 @@ export const AddPaymentDialog = () => {
 
           <div className="space-y-1.5">
             <Label>Nominal Bayar</Label>
-            <Input
-              type="number"
-              value={form.nominal_bayar || ""}
-              onChange={(e) => setForm((f) => ({ ...f, nominal_bayar: Number(e.target.value) }))}
-              disabled={saving}
-            />
+            <RupiahInput value={Number(form.nominal_bayar) || 0} onValueChange={(v) => setForm((f) => ({ ...f, nominal_bayar: v }))} disabled={saving} placeholder="Rp" />
             {errors.nominal_bayar ? <div className="text-xs text-destructive">{errors.nominal_bayar}</div> : null}
           </div>
 

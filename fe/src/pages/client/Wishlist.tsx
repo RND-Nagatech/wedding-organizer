@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ConfirmActionDialog } from "@/components/dialogs/ConfirmActionDialog";
 import { store, useBookings, useWishlistClient, type ClientWishlist } from "@/lib/dataStore";
 import { toast } from "sonner";
+import { statusLabel } from "@/lib/labels";
 import { Plus, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -195,7 +196,7 @@ const ClientWishlist = () => {
                   <TableCell className="font-medium">{(r.kode_booking || "—").toUpperCase()}</TableCell>
                   <TableCell>{r.kategori}</TableCell>
                   <TableCell className="capitalize">{r.prioritas}</TableCell>
-                  <TableCell className="capitalize">{r.status}</TableCell>
+                  <TableCell>{statusLabel(String(r.status || ""))}</TableCell>
                   <TableCell className="max-w-[520px] truncate">{r.permintaan}</TableCell>
                   <TableCell className="text-right">
                     <ConfirmActionDialog

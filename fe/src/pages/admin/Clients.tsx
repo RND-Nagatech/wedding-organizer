@@ -1,10 +1,8 @@
-import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Input } from "@/components/ui/input";
-import { formatDate } from "@/lib/mockData";
-import { useClients, usePackages } from "@/lib/dataStore";
-import { Search, Mail, Phone } from "lucide-react";
+import { useClients } from "@/lib/dataStore";
+import { Search } from "lucide-react";
 import { useState } from "react";
 import { AddClientDialog, ClientFormDialog } from "@/components/dialogs/AddClientDialog";
 import { Button } from "@/components/ui/button";
@@ -12,10 +10,11 @@ import { Pencil, Trash2 } from "lucide-react";
 import { ConfirmActionDialog } from "@/components/dialogs/ConfirmActionDialog";
 import { store } from "@/lib/dataStore";
 import { toast } from "sonner";
+import { Card } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 const Clients = () => {
   const clients = useClients();
-  const packages = usePackages();
   const [q, setQ] = useState("");
   const filtered = clients.filter(
     (c) =>
@@ -37,69 +36,74 @@ const Clients = () => {
         <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari nama klien..." className="pl-9" />
       </div>
 
-      <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
-        {filtered.map((c) => {
-          const pkg = packages.find((p) => p.id === c.packageId);
-          return (
-            <Card key={c.id} className="p-5 border-border shadow-soft hover:shadow-elegant transition-smooth bg-gradient-card">
-              <div className="flex items-start justify-between mb-3">
-                <div>
-                  <div className="text-[11px] uppercase tracking-wider text-muted-foreground">{c.code || "—"}</div>
-                  <h3 className="font-display text-lg leading-tight">{c.name}</h3>
-                  <p className="text-sm text-muted-foreground">& {c.partner}</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <StatusBadge status={c.status} />
-                  <ClientFormDialog
-                    mode="edit"
-                    initial={c}
-                    triggerLabel="Edit"
-                    trigger={
-                      <Button size="icon" variant="ghost">
-                        <Pencil className="w-4 h-4" />
-                      </Button>
-                    }
-                  />
-                  <ConfirmActionDialog
-                    title="Hapus klien?"
-                    description={`Data klien ${c.name} akan dihapus permanen.`}
-                    confirmText="Hapus"
-                    onConfirm={async () => {
-                      try {
-                        await store.deleteClient(c.id);
-                        toast.success("Klien berhasil dihapus");
-                      } catch (err: any) {
-                        toast.error(err?.message || "Gagal menghapus klien");
-                      }
-                    }}
-                    trigger={
-                      <Button size="icon" variant="ghost" className="text-destructive hover:text-destructive">
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    }
-                  />
-                </div>
-              </div>
-              <div className="space-y-1.5 text-sm text-muted-foreground">
-                <div className="flex items-center gap-2"><Mail className="w-3.5 h-3.5" /> {c.email}</div>
-                <div className="flex items-center gap-2"><Phone className="w-3.5 h-3.5" /> {c.phone}</div>
-              </div>
-              <div className="mt-4 pt-4 border-t border-border flex items-end justify-between">
-                <div>
-                  <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Hari-H</div>
-                  <div className="font-display text-base">{c.weddingDate ? formatDate(c.weddingDate) : "-"}</div>
-                </div>
-                {pkg?.name && (
-                  <div className="text-right">
-                    <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Paket</div>
-                    <div className="text-sm font-medium text-primary">{pkg.name}</div>
-                  </div>
-                )}
-              </div>
-            </Card>
-          );
-        })}
-      </div>
+      <Card className="border-border shadow-soft overflow-hidden">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted/50">
+                <TableHead>Kode</TableHead>
+                <TableHead>Nama Pria</TableHead>
+                <TableHead>Nama Wanita</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>No. HP</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right w-[160px]">Aksi</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filtered.map((c) => (
+                <TableRow key={c.id} className="hover:bg-muted/30 transition-smooth">
+                  <TableCell className="font-medium">{c.code || "—"}</TableCell>
+                  <TableCell>{c.name}</TableCell>
+                  <TableCell>{c.partner}</TableCell>
+                  <TableCell>{c.email || "—"}</TableCell>
+                  <TableCell>{c.phone || "—"}</TableCell>
+                  <TableCell><StatusBadge status={c.status} /></TableCell>
+                  <TableCell className="text-right">
+                    <div className="inline-flex gap-2">
+                      <ClientFormDialog
+                        mode="edit"
+                        initial={c}
+                        triggerLabel="Edit"
+                        trigger={
+                          <Button size="sm" variant="outline">
+                            <Pencil className="w-4 h-4 mr-1.5" /> Edit
+                          </Button>
+                        }
+                      />
+                      <ConfirmActionDialog
+                        title="Hapus klien?"
+                        description={`Data klien ${c.name} akan dihapus permanen.`}
+                        confirmText="Hapus"
+                        onConfirm={async () => {
+                          try {
+                            await store.deleteClient(c.id);
+                            toast.success("Klien berhasil dihapus");
+                          } catch (err: any) {
+                            toast.error(err?.message || "Gagal menghapus klien");
+                          }
+                        }}
+                        trigger={
+                          <Button size="sm" variant="destructive">
+                            <Trash2 className="w-4 h-4 mr-1.5" /> Hapus
+                          </Button>
+                        }
+                      />
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {filtered.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center text-muted-foreground py-10">
+                    Tidak ada data klien.
+                  </TableCell>
+                </TableRow>
+              ) : null}
+            </TableBody>
+          </Table>
+        </div>
+      </Card>
     </>
   );
 };

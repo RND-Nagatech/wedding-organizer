@@ -13,6 +13,7 @@ import { formatDate, formatIDR } from "@/lib/mockData";
 import { useClients, usePackages } from "@/lib/dataStore";
 import { exportToExcel, exportToPdf } from "@/lib/exporters";
 import { reportEvents, reportKeuanganDetail, reportKeuanganRekap, reportPayments } from "@/lib/api";
+import { statusLabel, titleCaseWords } from "@/lib/labels";
 
 const Reports = () => {
   const clients = useClients();
@@ -172,9 +173,9 @@ const Reports = () => {
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Semua</SelectItem>
-                      <SelectItem value="aktif">aktif</SelectItem>
-                      <SelectItem value="selesai">selesai</SelectItem>
-                      <SelectItem value="batal">batal</SelectItem>
+                      <SelectItem value="aktif">Aktif</SelectItem>
+                      <SelectItem value="selesai">Selesai</SelectItem>
+                      <SelectItem value="batal">Batal</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -202,7 +203,17 @@ const Reports = () => {
                     variant="outline"
                     onClick={async () => {
                       try {
-                        await exportToExcel({ filename: "laporan-event.xlsx", sheetName: "Event", rows: evtRows });
+                        const rows = evtRows.map((r) => ({
+                          "Kode Booking": String(r.kode_booking || "").toUpperCase(),
+                          "Kode Client": String(r.kode_client || ""),
+                          "Nama Client": String(r.nama_client || ""),
+                          "Tanggal Acara": r.tanggal_acara ? formatDate(r.tanggal_acara) : "",
+                          Paket: String(r.paket || ""),
+                          "Status Event": statusLabel(String(r.status_event || "")),
+                          Progress: `${Number(r.progress_percent ?? 0)}%`,
+                          PIC: String(r.pic || ""),
+                        }));
+                        await exportToExcel({ filename: "laporan-event.xlsx", sheetName: "Event", rows });
                         toast.success("Export Excel berhasil");
                       } catch (err: any) {
                         toast.error(err?.message || "Gagal export Excel");
@@ -218,15 +229,15 @@ const Reports = () => {
                         await exportToPdf({
                           filename: "laporan-event.pdf",
                           title: "Laporan Event",
-                          columns: ["kode_booking", "kode_client", "nama_client", "tanggal_acara", "paket", "status_event", "progress_percent", "pic"],
+                          columns: ["Kode Booking", "Kode Client", "Nama Client", "Tanggal Acara", "Paket", "Status Event", "Progress", "PIC"],
                           rows: evtRows.map((r) => [
-                            String(r.kode_booking || ""),
+                            String(r.kode_booking || "").toUpperCase(),
                             String(r.kode_client || ""),
                             String(r.nama_client || ""),
-                            String(r.tanggal_acara || ""),
+                            r.tanggal_acara ? formatDate(r.tanggal_acara) : "",
                             String(r.paket || ""),
-                            String(r.status_event || ""),
-                            String(r.progress_percent ?? ""),
+                            statusLabel(String(r.status_event || "")),
+                            `${Number(r.progress_percent ?? 0)}%`,
                             String(r.pic || ""),
                           ]),
                         });
@@ -243,7 +254,7 @@ const Reports = () => {
             </div>
 
             <div className="p-4 overflow-x-auto">
-              <Table>
+              <Table className="border border-border">
                 <TableHeader>
                   <TableRow>
                     <TableHead>Kode Booking</TableHead>
@@ -264,7 +275,7 @@ const Reports = () => {
                       <TableCell>{r.nama_client || "—"}</TableCell>
                       <TableCell>{r.tanggal_acara ? formatDate(r.tanggal_acara) : "—"}</TableCell>
                       <TableCell>{r.paket || "—"}</TableCell>
-                      <TableCell className="capitalize">{r.status_event || "—"}</TableCell>
+                      <TableCell>{statusLabel(String(r.status_event || ""))}</TableCell>
                       <TableCell className="text-right font-medium text-primary">{r.progress_percent ?? 0}%</TableCell>
                       <TableCell>{r.pic || "—"}</TableCell>
                     </TableRow>
@@ -300,8 +311,8 @@ const Reports = () => {
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Semua</SelectItem>
-                      <SelectItem value="lunas">lunas</SelectItem>
-                      <SelectItem value="belum">belum</SelectItem>
+                      <SelectItem value="lunas">Lunas</SelectItem>
+                      <SelectItem value="belum">Belum</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -325,7 +336,17 @@ const Reports = () => {
                     variant="outline"
                     onClick={async () => {
                       try {
-                        await exportToExcel({ filename: "laporan-pembayaran-klien.xlsx", sheetName: "Pembayaran", rows: payRows });
+                        const rows = payRows.map((r) => ({
+                          "Kode Booking": String(r.kode_booking || "").toUpperCase(),
+                          "Kode Client": String(r.kode_client || ""),
+                          "Nama Client": String(r.nama_client || ""),
+                          "Total Tagihan": Number(r.total_tagihan ?? 0),
+                          DP: Number(r.DP ?? 0),
+                          Cicilan: Number(r.cicilan ?? 0),
+                          "Sisa Pembayaran": Number(r.sisa_pembayaran ?? 0),
+                          Status: statusLabel(String(r.status_pembayaran || "")),
+                        }));
+                        await exportToExcel({ filename: "laporan-pembayaran-klien.xlsx", sheetName: "Pembayaran", rows });
                         toast.success("Export Excel berhasil");
                       } catch (err: any) {
                         toast.error(err?.message || "Gagal export Excel");
@@ -341,16 +362,16 @@ const Reports = () => {
                         await exportToPdf({
                           filename: "laporan-pembayaran-klien.pdf",
                           title: "Laporan Pembayaran Klien",
-                          columns: ["kode_booking", "kode_client", "nama_client", "total_tagihan", "DP", "cicilan", "sisa_pembayaran", "status_pembayaran"],
+                          columns: ["Kode Booking", "Kode Client", "Nama Client", "Total Tagihan", "DP", "Cicilan", "Sisa Pembayaran", "Status"],
                           rows: payRows.map((r) => [
-                            String(r.kode_booking || ""),
+                            String(r.kode_booking || "").toUpperCase(),
                             String(r.kode_client || ""),
                             String(r.nama_client || ""),
-                            String(r.total_tagihan ?? 0),
-                            String(r.DP ?? 0),
-                            String(r.cicilan ?? 0),
-                            String(r.sisa_pembayaran ?? 0),
-                            String(r.status_pembayaran || ""),
+                            formatIDR(Number(r.total_tagihan ?? 0)),
+                            formatIDR(Number(r.DP ?? 0)),
+                            formatIDR(Number(r.cicilan ?? 0)),
+                            formatIDR(Number(r.sisa_pembayaran ?? 0)),
+                            statusLabel(String(r.status_pembayaran || "")),
                           ]),
                         });
                         toast.success("Export PDF berhasil");
@@ -366,7 +387,7 @@ const Reports = () => {
             </div>
 
             <div className="p-4 overflow-x-auto">
-              <Table>
+              <Table className="border border-border">
                 <TableHeader>
                   <TableRow>
                     <TableHead>Kode Booking</TableHead>
@@ -389,7 +410,7 @@ const Reports = () => {
                       <TableCell className="text-right">{formatIDR(Number(r.DP) || 0)}</TableCell>
                       <TableCell className="text-right">{formatIDR(Number(r.cicilan) || 0)}</TableCell>
                       <TableCell className="text-right font-medium text-primary">{formatIDR(Number(r.sisa_pembayaran) || 0)}</TableCell>
-                      <TableCell className="capitalize">{r.status_pembayaran || "—"}</TableCell>
+                      <TableCell>{statusLabel(String(r.status_pembayaran || ""))}</TableCell>
                     </TableRow>
                   ))}
                   {payRows.length === 0 ? (
@@ -424,7 +445,7 @@ const Reports = () => {
                     <SelectContent>
                       <SelectItem value="all">Semua</SelectItem>
                       {["DP", "cicilan", "pelunasan", "vendor", "operasional", "lainnya"].map((k) => (
-                        <SelectItem key={k} value={k}>{k}</SelectItem>
+                        <SelectItem key={k} value={k}>{titleCaseWords(String(k))}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -437,7 +458,16 @@ const Reports = () => {
                     variant="outline"
                     onClick={async () => {
                       try {
-                        await exportToExcel({ filename: "laporan-keuangan-detail.xlsx", sheetName: "KeuanganDetail", rows: kRows });
+                        const rows = kRows.map((r) => ({
+                          "No Trx": String(r.no_trx || ""),
+                          Tanggal: r.tgl_trx ? formatDate(r.tgl_trx) : "",
+                          Kategori: titleCaseWords(String(r.kategori || "")),
+                          Keterangan: String(r.keterangan || ""),
+                          "Jumlah Masuk": Number(r.jumlah_in ?? 0),
+                          "Jumlah Keluar": Number(r.jumlah_out ?? 0),
+                          "Saldo Berjalan": Number(r.saldo_berjalan ?? 0),
+                        }));
+                        await exportToExcel({ filename: "laporan-keuangan-detail.xlsx", sheetName: "KeuanganDetail", rows });
                         toast.success("Export Excel berhasil");
                       } catch (err: any) {
                         toast.error(err?.message || "Gagal export Excel");
@@ -453,15 +483,15 @@ const Reports = () => {
                         await exportToPdf({
                           filename: "laporan-keuangan-detail.pdf",
                           title: "Laporan Keuangan Detail",
-                          columns: ["no_trx", "tgl_trx", "kategori", "keterangan", "jumlah_in", "jumlah_out", "saldo_berjalan"],
+                          columns: ["No Trx", "Tanggal", "Kategori", "Keterangan", "Jumlah Masuk", "Jumlah Keluar", "Saldo Berjalan"],
                           rows: kRows.map((r) => [
                             String(r.no_trx || ""),
-                            String(r.tgl_trx || ""),
-                            String(r.kategori || ""),
+                            r.tgl_trx ? formatDate(r.tgl_trx) : "",
+                            titleCaseWords(String(r.kategori || "")),
                             String(r.keterangan || ""),
-                            String(r.jumlah_in ?? 0),
-                            String(r.jumlah_out ?? 0),
-                            String(r.saldo_berjalan ?? 0),
+                            formatIDR(Number(r.jumlah_in ?? 0)),
+                            formatIDR(Number(r.jumlah_out ?? 0)),
+                            formatIDR(Number(r.saldo_berjalan ?? 0)),
                           ]),
                         });
                         toast.success("Export PDF berhasil");
@@ -477,7 +507,7 @@ const Reports = () => {
             </div>
 
             <div className="p-4 overflow-x-auto">
-              <Table>
+              <Table className="border border-border">
                 <TableHeader>
                   <TableRow>
                     <TableHead>No Trx</TableHead>
@@ -494,7 +524,7 @@ const Reports = () => {
                     <TableRow key={idx}>
                       <TableCell className="font-medium">{r.no_trx}</TableCell>
                       <TableCell>{r.tgl_trx ? formatDate(r.tgl_trx) : "—"}</TableCell>
-                      <TableCell>{r.kategori}</TableCell>
+                      <TableCell>{titleCaseWords(String(r.kategori || ""))}</TableCell>
                       <TableCell className="max-w-[420px] truncate">{r.keterangan || "—"}</TableCell>
                       <TableCell className="text-right">{formatIDR(Number(r.jumlah_in) || 0)}</TableCell>
                       <TableCell className="text-right">{formatIDR(Number(r.jumlah_out) || 0)}</TableCell>
@@ -534,7 +564,13 @@ const Reports = () => {
                     variant="outline"
                     onClick={async () => {
                       try {
-                        await exportToExcel({ filename: "laporan-keuangan-rekap.xlsx", sheetName: "KeuanganRekap", rows: krData?.data || [] });
+                        const rows = (krData?.data || []).map((r: any) => ({
+                          Kategori: titleCaseWords(String(r.kategori || "")),
+                          "Total Masuk": Number(r.total_in ?? 0),
+                          "Total Keluar": Number(r.total_out ?? 0),
+                          Saldo: Number(r.saldo ?? 0),
+                        }));
+                        await exportToExcel({ filename: "laporan-keuangan-rekap.xlsx", sheetName: "KeuanganRekap", rows });
                         toast.success("Export Excel berhasil");
                       } catch (err: any) {
                         toast.error(err?.message || "Gagal export Excel");
@@ -550,12 +586,12 @@ const Reports = () => {
                         await exportToPdf({
                           filename: "laporan-keuangan-rekap.pdf",
                           title: "Laporan Keuangan Rekap",
-                          columns: ["kategori", "total_in", "total_out", "saldo"],
+                          columns: ["Kategori", "Total Masuk", "Total Keluar", "Saldo"],
                           rows: (krData?.data || []).map((r: any) => [
-                            String(r.kategori || ""),
-                            String(r.total_in ?? 0),
-                            String(r.total_out ?? 0),
-                            String(r.saldo ?? 0),
+                            titleCaseWords(String(r.kategori || "")),
+                            formatIDR(Number(r.total_in ?? 0)),
+                            formatIDR(Number(r.total_out ?? 0)),
+                            formatIDR(Number(r.saldo ?? 0)),
                           ]),
                         });
                         toast.success("Export PDF berhasil");
@@ -586,19 +622,19 @@ const Reports = () => {
                 </Card>
               </div>
 
-              <Table>
+              <Table className="border border-border">
                 <TableHeader>
                   <TableRow>
                     <TableHead>Kategori</TableHead>
-                    <TableHead className="text-right">Total In</TableHead>
-                    <TableHead className="text-right">Total Out</TableHead>
+                    <TableHead className="text-right">Total Masuk</TableHead>
+                    <TableHead className="text-right">Total Keluar</TableHead>
                     <TableHead className="text-right">Saldo</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {(krData?.data || []).map((r: any, idx: number) => (
                     <TableRow key={idx}>
-                      <TableCell className="font-medium">{r.kategori}</TableCell>
+                      <TableCell className="font-medium">{titleCaseWords(String(r.kategori || ""))}</TableCell>
                       <TableCell className="text-right">{formatIDR(Number(r.total_in) || 0)}</TableCell>
                       <TableCell className="text-right">{formatIDR(Number(r.total_out) || 0)}</TableCell>
                       <TableCell className="text-right font-medium text-primary">{formatIDR(Number(r.saldo) || 0)}</TableCell>

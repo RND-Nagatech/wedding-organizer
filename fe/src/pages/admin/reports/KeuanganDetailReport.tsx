@@ -11,11 +11,18 @@ import { Download } from "lucide-react";
 import { formatDate, formatIDR } from "@/lib/mockData";
 import { exportToExcel, exportToPdf } from "@/lib/exporters";
 import { reportKeuanganDetail } from "@/lib/api";
+import { titleCaseWords } from "@/lib/labels";
 
 const KeuanganDetailReport = () => {
-  const today = new Date().toISOString().slice(0, 10);
-  const [from, setFrom] = useState(today);
-  const [to, setTo] = useState(today);
+  const today = new Date();
+  const toISO = (d: Date) => d.toISOString().slice(0, 10);
+  const defaultTo = toISO(today);
+  const dFrom = new Date(today);
+  dFrom.setDate(dFrom.getDate() - 30);
+  const defaultFrom = toISO(dFrom);
+
+  const [from, setFrom] = useState(defaultFrom);
+  const [to, setTo] = useState(defaultTo);
   const [kat, setKat] = useState("all");
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -76,7 +83,19 @@ const KeuanganDetailReport = () => {
                 variant="outline"
                 onClick={async () => {
                   try {
-                    await exportToExcel({ filename: "laporan-keuangan-detail.xlsx", sheetName: "KeuanganDetail", rows });
+                    await exportToExcel({
+                      filename: "laporan-keuangan-detail.xlsx",
+                      sheetName: "Keuangan Detail",
+                      rows: rows.map((r) => ({
+                        "No Trx": String(r.no_trx || ""),
+                        Tanggal: String(r.tgl_trx || ""),
+                        Kategori: titleCaseWords(String(r.kategori || "")),
+                        Keterangan: String(r.keterangan || ""),
+                        "Jumlah In": Number(r.jumlah_in ?? 0),
+                        "Jumlah Out": Number(r.jumlah_out ?? 0),
+                        "Saldo Berjalan": Number(r.saldo_berjalan ?? 0),
+                      })),
+                    });
                     toast.success("Export Excel berhasil");
                   } catch (err: any) {
                     toast.error(err?.message || "Gagal export Excel");
@@ -92,11 +111,11 @@ const KeuanganDetailReport = () => {
                     await exportToPdf({
                       filename: "laporan-keuangan-detail.pdf",
                       title: "Laporan Keuangan Detail",
-                      columns: ["no_trx", "tgl_trx", "kategori", "keterangan", "jumlah_in", "jumlah_out", "saldo_berjalan"],
+                      columns: ["No Trx", "Tanggal", "Kategori", "Keterangan", "Jumlah In", "Jumlah Out", "Saldo Berjalan"],
                       rows: rows.map((r) => [
                         String(r.no_trx || ""),
                         String(r.tgl_trx || ""),
-                        String(r.kategori || ""),
+                        titleCaseWords(String(r.kategori || "")),
                         String(r.keterangan || ""),
                         String(r.jumlah_in ?? 0),
                         String(r.jumlah_out ?? 0),
@@ -116,7 +135,7 @@ const KeuanganDetailReport = () => {
         </div>
 
         <div className="p-4 overflow-x-auto">
-          <Table>
+          <Table className="border border-border">
             <TableHeader>
               <TableRow>
                 <TableHead>No Trx</TableHead>
@@ -133,7 +152,7 @@ const KeuanganDetailReport = () => {
                 <TableRow key={idx}>
                   <TableCell className="font-medium">{r.no_trx}</TableCell>
                   <TableCell>{r.tgl_trx ? formatDate(r.tgl_trx) : "—"}</TableCell>
-                  <TableCell>{r.kategori}</TableCell>
+                  <TableCell>{r.kategori ? titleCaseWords(r.kategori) : "—"}</TableCell>
                   <TableCell className="max-w-[420px] truncate">{r.keterangan || "—"}</TableCell>
                   <TableCell className="text-right">{formatIDR(Number(r.jumlah_in) || 0)}</TableCell>
                   <TableCell className="text-right">{formatIDR(Number(r.jumlah_out) || 0)}</TableCell>
@@ -156,4 +175,3 @@ const KeuanganDetailReport = () => {
 };
 
 export default KeuanganDetailReport;
-

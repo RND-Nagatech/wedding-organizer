@@ -4,13 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useKatalogMakeup } from "@/lib/dataStore";
 import { pickDraftItem } from "@/lib/bookingDraft";
 import { formatIDR } from "@/lib/mockData";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { CheckCircle2 } from "lucide-react";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 const API_ORIGIN = (import.meta.env.VITE_API_URL || "http://localhost:5001/api").replace(/\/api\/?$/, "");
 
@@ -22,6 +22,8 @@ export default function ClientCatalogMakeup() {
 
   const [q, setQ] = useState("");
   const [filterKategori, setFilterKategori] = useState<string>("all");
+  const [open, setOpen] = useState(false);
+  const [selected, setSelected] = useState<any>(null);
 
   const rows = useMemo(() => {
     return list
@@ -62,57 +64,103 @@ export default function ClientCatalogMakeup() {
         </div>
 
         <div className="p-4 pt-0">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-muted/50">
-                <TableHead>Nama Style</TableHead>
-                <TableHead>Kategori</TableHead>
-                <TableHead>MUA</TableHead>
-                <TableHead>Harga</TableHead>
-                <TableHead>Foto</TableHead>
-                <TableHead className="text-right w-[160px]">Aksi</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rows.map((x) => (
-                <TableRow key={x.id}>
-                  <TableCell className="font-medium">{x.nama_style}</TableCell>
-                  <TableCell className="capitalize">{x.kategori}</TableCell>
-                  <TableCell>{x.vendor_mua_nama || "—"}</TableCell>
-                  <TableCell>{formatIDR(x.harga || 0)}</TableCell>
-                  <TableCell>
-                    {x.foto ? (
-                      <a className="text-primary hover:underline" href={`${API_ORIGIN}${x.foto}`} target="_blank" rel="noreferrer">Lihat</a>
-                    ) : (
-                      "—"
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      size="sm"
-                      className="bg-primary hover:bg-primary/90"
-                      onClick={() => {
-                        pickDraftItem("makeup", x.id);
-                        nav("/client/booking");
-                      }}
-                    >
-                      <CheckCircle2 className="w-4 h-4 mr-1.5" /> Pilih
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {rows.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground py-10">
-                    Tidak ada data.
-                  </TableCell>
-                </TableRow>
-              ) : null}
-            </TableBody>
-          </Table>
+          {rows.length === 0 ? (
+            <div className="text-center text-muted-foreground py-10">Tidak ada data.</div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+              {rows.map((x) => {
+                const src = x.foto ? `${API_ORIGIN}${x.foto}` : "";
+                return (
+                  <button
+                    key={x.id}
+                    type="button"
+                    className="text-left rounded-xl overflow-hidden border border-border bg-background hover:shadow-elegant transition-smooth"
+                    onClick={() => {
+                      setSelected(x);
+                      setOpen(true);
+                    }}
+                  >
+                    <div className="aspect-square bg-muted/30">
+                      {src ? (
+                        <img src={src} alt={x.nama_style} className="w-full h-full object-cover" loading="lazy" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">No Photo</div>
+                      )}
+                    </div>
+                    <div className="p-3">
+                      <div className="font-medium truncate">{x.nama_style}</div>
+                      <div className="text-xs text-muted-foreground truncate capitalize">
+                        {x.kategori} · {x.vendor_mua_nama || "—"}
+                      </div>
+                      <div className="text-xs text-muted-foreground truncate">{formatIDR(x.harga || 0)}</div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
       </Card>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="sm:max-w-3xl">
+          <DialogHeader>
+            <DialogTitle className="font-display text-2xl">Detail Makeup</DialogTitle>
+          </DialogHeader>
+
+          {!selected ? null : (
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="rounded-xl overflow-hidden border border-border bg-muted/20">
+                {selected.foto ? (
+                  <img src={`${API_ORIGIN}${selected.foto}`} alt={selected.nama_style} className="w-full h-[420px] object-cover" />
+                ) : (
+                  <div className="w-full h-[420px] flex items-center justify-center text-sm text-muted-foreground">No Photo</div>
+                )}
+              </div>
+              <div className="space-y-3">
+                <div>
+                  <div className="text-xs uppercase tracking-wider text-muted-foreground">Nama Style</div>
+                  <div className="font-display text-2xl">{selected.nama_style}</div>
+                </div>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <div className="text-xs text-muted-foreground">Kategori</div>
+                    <div className="font-medium capitalize">{selected.kategori}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground">MUA</div>
+                    <div className="font-medium">{selected.vendor_mua_nama || "—"}</div>
+                  </div>
+                  <div className="col-span-2">
+                    <div className="text-xs text-muted-foreground">Harga</div>
+                    <div className="font-medium text-primary">{formatIDR(selected.harga || 0)}</div>
+                  </div>
+                </div>
+                {selected.catatan ? (
+                  <div className="text-sm">
+                    <div className="text-xs text-muted-foreground">Catatan</div>
+                    <div className="whitespace-pre-wrap">{selected.catatan}</div>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              className="bg-primary hover:bg-primary/90"
+              onClick={() => {
+                if (!selected) return;
+                pickDraftItem("makeup", selected.id);
+                setOpen(false);
+                nav("/client/booking");
+              }}
+            >
+              <CheckCircle2 className="w-4 h-4 mr-1.5" /> Pilih
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
-

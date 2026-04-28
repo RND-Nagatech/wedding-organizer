@@ -484,6 +484,16 @@ export async function ambilTimelineClient(params?: { kode_booking?: string }) {
   return res.json();
 }
 
+export async function updateTimelineClient(id: string, payload: any) {
+  const res = await fetch(`${API_BASE}/tt_timeline_client/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error("Gagal mengedit timeline client");
+  return res.json();
+}
+
 // Tahap 12: Keuangan (tt_keuangan)
 export async function ambilKeuangan(params?: { tgl_from?: string; tgl_to?: string; kategori?: string }) {
   const qs = params ? `?${new URLSearchParams(params as any).toString()}` : "";

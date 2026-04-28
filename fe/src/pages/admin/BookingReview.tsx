@@ -12,6 +12,7 @@ import { ambilFormulirDigitalByBooking, ambilKategoriVendor, ambilVendorAvailabl
 import { toast } from "sonner";
 import { Eye, CheckCircle2, XCircle } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { statusLabel } from "@/lib/labels";
 
 const API_ORIGIN = (import.meta.env.VITE_API_URL || "http://localhost:5001/api").replace(/\/api\/?$/, "");
 
@@ -380,7 +381,7 @@ export default function BookingReview() {
                     <TableCell>{b.clientName || "—"}</TableCell>
                     <TableCell>{formatDate(b.eventDate)}</TableCell>
                     <TableCell className="text-primary font-medium">{pkgName}</TableCell>
-                    <TableCell>{b.reviewStatus || "menunggu_review"}</TableCell>
+                    <TableCell>{statusLabel(String(b.reviewStatus || "menunggu_review"))}</TableCell>
                     <TableCell className="text-right">
                       <ReviewDialog bookingId={b.id} />
                     </TableCell>
@@ -401,4 +402,3 @@ export default function BookingReview() {
     </>
   );
 }
-

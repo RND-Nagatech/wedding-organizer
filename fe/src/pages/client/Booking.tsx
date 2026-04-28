@@ -14,6 +14,7 @@ import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Link, useNavigate } from "react-router-dom";
 import { clearBookingDraft, readBookingDraft } from "@/lib/bookingDraft";
+import { statusLabel } from "@/lib/labels";
 
 const sentinelNone = "__none__";
 
@@ -281,7 +282,7 @@ const ClientBooking = () => {
     <>
       <PageHeader
         title="Booking Saya"
-        subtitle={`${(booking.code || booking.id).toUpperCase()} · ${booking.reviewStatus || "menunggu_review"}`}
+        subtitle={`${(booking.code || booking.id).toUpperCase()} · ${statusLabel(booking.reviewStatus || "menunggu_review")}`}
         actions={
           <Button asChild variant="outline">
             <Link to="/client/references">Upload Referensi</Link>
@@ -298,7 +299,7 @@ const ClientBooking = () => {
           <div className="flex items-center gap-2">
             <StatusBadge status={booking.eventStatus || "draft"} />
             <div className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1 text-xs bg-background">
-              <BadgeCheck className="w-3.5 h-3.5 text-primary" /> {booking.reviewStatus || "menunggu_review"}
+              <BadgeCheck className="w-3.5 h-3.5 text-primary" /> {statusLabel(booking.reviewStatus || "menunggu_review")}
             </div>
           </div>
         </div>

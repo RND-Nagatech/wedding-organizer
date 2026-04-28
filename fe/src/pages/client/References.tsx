@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ConfirmActionDialog } from "@/components/dialogs/ConfirmActionDialog";
 import { store, useBookings, useReferensiClient, type ClientReference } from "@/lib/dataStore";
 import { toast } from "sonner";
+import { statusLabel } from "@/lib/labels";
 import { Plus, Trash2, Image as ImageIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { uploadGambar } from "@/lib/api";
@@ -221,7 +222,7 @@ const ClientReferences = () => {
                   <TableCell className="font-medium">{(r.kode_booking || "—").toUpperCase()}</TableCell>
                   <TableCell>{r.kategori}</TableCell>
                   <TableCell>{r.judul_referensi || "—"}</TableCell>
-                  <TableCell className="capitalize">{r.status}</TableCell>
+                  <TableCell>{statusLabel(String(r.status || ""))}</TableCell>
                   <TableCell>
                     {r.upload_gambar ? (
                       <a className="inline-flex items-center gap-2 text-primary hover:underline" href={`${API_ORIGIN}${r.upload_gambar}`} target="_blank" rel="noreferrer">

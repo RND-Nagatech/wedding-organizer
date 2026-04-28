@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { Pencil, Plus, Trash2, Image as ImageIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { uploadGambar } from "@/lib/api";
+import { statusLabel } from "@/lib/labels";
 
 const API_ORIGIN = (import.meta.env.VITE_API_URL || "http://localhost:5001/api").replace(/\/api\/?$/, "");
 
@@ -150,7 +151,7 @@ function ReferenceFormDialog({
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {statusOptions.map((s) => (
-                    <SelectItem key={s} value={s}>{s}</SelectItem>
+                    <SelectItem key={s} value={s}>{statusLabel(String(s))}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -316,7 +317,7 @@ const ClientReferencesPage = () => {
                   <TableCell className="font-medium">{(r.kode_booking || "—").toUpperCase()}</TableCell>
                   <TableCell>{r.kategori}</TableCell>
                   <TableCell>{r.judul_referensi || "—"}</TableCell>
-                  <TableCell className="capitalize">{r.status}</TableCell>
+                  <TableCell>{statusLabel(String(r.status || ""))}</TableCell>
                   <TableCell>
                     {r.upload_gambar ? (
                       <a className="inline-flex items-center gap-2 text-primary hover:underline" href={`${API_ORIGIN}${r.upload_gambar}`} target="_blank" rel="noreferrer">
@@ -375,4 +376,3 @@ const ClientReferencesPage = () => {
 };
 
 export default ClientReferencesPage;
-

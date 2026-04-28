@@ -12,6 +12,7 @@ import { formatIDR } from "@/lib/mockData";
 import { useClients } from "@/lib/dataStore";
 import { exportToExcel, exportToPdf } from "@/lib/exporters";
 import { reportPayments } from "@/lib/api";
+import { statusLabel } from "@/lib/labels";
 
 const PaymentsReport = () => {
   const clients = useClients();
@@ -20,9 +21,15 @@ const PaymentsReport = () => {
     [clients]
   );
 
-  const today = new Date().toISOString().slice(0, 10);
-  const [from, setFrom] = useState(today);
-  const [to, setTo] = useState(today);
+  const today = new Date();
+  const toISO = (d: Date) => d.toISOString().slice(0, 10);
+  const defaultTo = toISO(today);
+  const dFrom = new Date(today);
+  dFrom.setDate(dFrom.getDate() - 30);
+  const defaultFrom = toISO(dFrom);
+
+  const [from, setFrom] = useState(defaultFrom);
+  const [to, setTo] = useState(defaultTo);
   const [status, setStatus] = useState("all");
   const [client, setClient] = useState("all");
   const [rows, setRows] = useState<any[]>([]);
@@ -96,7 +103,20 @@ const PaymentsReport = () => {
                 variant="outline"
                 onClick={async () => {
                   try {
-                    await exportToExcel({ filename: "laporan-pembayaran-klien.xlsx", sheetName: "Pembayaran", rows });
+                    await exportToExcel({
+                      filename: "laporan-pembayaran-klien.xlsx",
+                      sheetName: "Pembayaran",
+                      rows: rows.map((r) => ({
+                        "Kode Booking": String(r.kode_booking || "").toUpperCase(),
+                        "Kode Client": String(r.kode_client || ""),
+                        "Nama Client": String(r.nama_client || ""),
+                        "Total Tagihan": Number(r.total_tagihan ?? 0),
+                        DP: Number(r.DP ?? 0),
+                        Cicilan: Number(r.cicilan ?? 0),
+                        "Sisa Pembayaran": Number(r.sisa_pembayaran ?? 0),
+                        Status: statusLabel(String(r.status_pembayaran || "")),
+                      })),
+                    });
                     toast.success("Export Excel berhasil");
                   } catch (err: any) {
                     toast.error(err?.message || "Gagal export Excel");
@@ -112,16 +132,16 @@ const PaymentsReport = () => {
                     await exportToPdf({
                       filename: "laporan-pembayaran-klien.pdf",
                       title: "Laporan Pembayaran Klien",
-                      columns: ["kode_booking", "kode_client", "nama_client", "total_tagihan", "DP", "cicilan", "sisa_pembayaran", "status_pembayaran"],
+                      columns: ["Kode Booking", "Kode Client", "Nama Client", "Total Tagihan", "DP", "Cicilan", "Sisa Pembayaran", "Status"],
                       rows: rows.map((r) => [
-                        String(r.kode_booking || ""),
+                        String(r.kode_booking || "").toUpperCase(),
                         String(r.kode_client || ""),
                         String(r.nama_client || ""),
                         String(r.total_tagihan ?? 0),
                         String(r.DP ?? 0),
                         String(r.cicilan ?? 0),
                         String(r.sisa_pembayaran ?? 0),
-                        String(r.status_pembayaran || ""),
+                        statusLabel(String(r.status_pembayaran || "")),
                       ]),
                     });
                     toast.success("Export PDF berhasil");
@@ -137,7 +157,7 @@ const PaymentsReport = () => {
         </div>
 
         <div className="p-4 overflow-x-auto">
-          <Table>
+          <Table className="border border-border">
             <TableHeader>
               <TableRow>
                 <TableHead>Kode Booking</TableHead>
@@ -160,7 +180,7 @@ const PaymentsReport = () => {
                   <TableCell className="text-right">{formatIDR(Number(r.DP) || 0)}</TableCell>
                   <TableCell className="text-right">{formatIDR(Number(r.cicilan) || 0)}</TableCell>
                   <TableCell className="text-right font-medium text-primary">{formatIDR(Number(r.sisa_pembayaran) || 0)}</TableCell>
-                  <TableCell className="capitalize">{r.status_pembayaran || "—"}</TableCell>
+                  <TableCell>{r.status_pembayaran ? statusLabel(r.status_pembayaran) : "—"}</TableCell>
                 </TableRow>
               ))}
               {rows.length === 0 ? (
@@ -179,4 +199,3 @@ const PaymentsReport = () => {
 };
 
 export default PaymentsReport;
-

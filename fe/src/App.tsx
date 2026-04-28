@@ -19,7 +19,8 @@ import Vendors from "./pages/admin/Vendors";
 import Packages from "./pages/admin/Packages";
 import VendorCategories from "./pages/admin/VendorCategories";
 import Bookings from "./pages/admin/Bookings";
-import BookingReview from "./pages/admin/BookingReview";
+import Projects from "./pages/admin/Projects";
+import ProjectDetail from "./pages/admin/ProjectDetail";
 import Timeline from "./pages/admin/Timeline";
 import Invoices from "./pages/admin/Invoices";
 import Payments from "./pages/admin/Payments";
@@ -53,6 +54,9 @@ import ClientCatalogBaju from "./pages/client/ClientCatalogBaju";
 import ClientCatalogDekorasi from "./pages/client/ClientCatalogDekorasi";
 import ClientCatalogMakeup from "./pages/client/ClientCatalogMakeup";
 import DigitalForm from "./pages/client/DigitalForm";
+import MyPlanning from "./pages/client/MyPlanning";
+import MyPreferences from "./pages/client/MyPreferences";
+import MyGuests from "./pages/client/MyGuests";
 
 const queryClient = new QueryClient();
 
@@ -91,7 +95,8 @@ const App = () => (
                         <Route path="crew" element={<CrewAssignments />} />
                         <Route path="keuangan" element={<Keuangan />} />
                         <Route path="bookings" element={<RequirePermission permission="bookings"><Bookings /></RequirePermission>} />
-                        <Route path="booking-review" element={<RequirePermission permission="bookings"><BookingReview /></RequirePermission>} />
+                        <Route path="projects" element={<RequirePermission permission="bookings"><Projects /></RequirePermission>} />
+                        <Route path="projects/:id" element={<RequirePermission permission="bookings"><ProjectDetail /></RequirePermission>} />
                         <Route path="timeline" element={<RequirePermission permission="timeline"><Timeline /></RequirePermission>} />
                         {/* <Route path="invoices" element={<RequirePermission permission="invoices"><Invoices /></RequirePermission>} /> */}
                         <Route path="payments" element={<RequirePermission permission="payments"><Payments /></RequirePermission>} />
@@ -117,6 +122,8 @@ const App = () => (
                     <AppLayout>
                       <Routes>
                         <Route index element={<ClientHome />} />
+                        <Route path="planning" element={<MyPlanning />} />
+                        <Route path="preferences" element={<MyPreferences />} />
                         <Route path="packages" element={<ClientPackages />} />
                         <Route path="booking" element={<ClientBooking />} />
                         <Route path="catalog-baju" element={<ClientCatalogBaju />} />
@@ -128,6 +135,8 @@ const App = () => (
                         <Route path="timeline" element={<ClientTimeline />} />
                         {/* <Route path="invoices" element={<ClientInvoices />} /> */}
                         <Route path="payments" element={<ClientPayments />} />
+                        <Route path="budget" element={<ClientPayments />} />
+                        <Route path="guests" element={<MyGuests />} />
                       </Routes>
                     </AppLayout>
                   </ProtectedRoute>

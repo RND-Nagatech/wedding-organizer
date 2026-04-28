@@ -3,7 +3,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
 import { formatDate, formatIDR } from "@/lib/mockData";
 import { useClients, useVendors, usePackages, useBookings, useInvoices } from "@/lib/dataStore";
-import { CalendarDays, Users, Receipt, TrendingUp, Heart, ArrowUpRight } from "lucide-react";
+import { CalendarDays, Users, Receipt, TrendingUp, Heart, ArrowUpRight, AlertCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useSystemProfile } from "@/contexts/SystemProfileContext";
 
@@ -16,6 +16,9 @@ const AdminDashboard = () => {
   const invoices = useInvoices();
 
   const totalRevenue = invoices.reduce((s, i) => s + (i.paid || i.dibayar || 0), 0);
+  const pendingApproval = bookings
+    .filter((b) => (b.reviewStatus || "menunggu_review") === "menunggu_review")
+    .sort((a, b) => String(a.eventDate || "").localeCompare(String(b.eventDate || "")));
   const upcoming = bookings
     .filter((b) => new Date(b.eventDate) >= new Date())
     .sort((a, b) => +new Date(a.eventDate) - +new Date(b.eventDate));
@@ -82,27 +85,36 @@ const AdminDashboard = () => {
         <Card className="p-6 border-border shadow-soft">
           <div className="flex items-center justify-between mb-5">
             <div>
-              <h3 className="font-display text-xl">Invoice Terbaru</h3>
-              <p className="text-xs text-muted-foreground mt-0.5">Status pembayaran</p>
+              <h3 className="font-display text-xl">Menunggu Approval</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">Booking yang perlu direview WO</p>
             </div>
-            <Receipt className="w-4 h-4 text-muted-foreground" />
+            <AlertCircle className="w-4 h-4 text-muted-foreground" />
           </div>
           <div className="space-y-4">
-            {invoices.slice(0, 5).map((inv) => {
-              const client = clients.find((c) => c.id === inv.clientId);
+            {pendingApproval.slice(0, 6).map((b) => {
+              const pkg = packages.find((p) => p.id === b.packageId);
               return (
-                <div key={inv.id} className="flex items-center justify-between gap-2">
+                <div key={b.id} className="flex items-center justify-between gap-2">
                   <div className="min-w-0">
-                    <div className="text-sm font-medium truncate">{client?.name}</div>
-                    <div className="text-xs text-muted-foreground">{inv.id} · {formatDate(inv.dueDate)}</div>
+                    <div className="text-sm font-medium truncate">{b.clientName || "—"}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {(b.code || b.id).toUpperCase()} · {formatDate(b.eventDate)} · {pkg?.name || "-"}
+                    </div>
                   </div>
                   <div className="text-right shrink-0">
-                    <div className="text-sm font-medium">{formatIDR(inv.amount)}</div>
-                    <StatusBadge status={inv.status} />
+                    <Link
+                      to={`/admin/projects/${b.id}`}
+                      className="text-sm text-primary inline-flex items-center gap-1 hover:underline"
+                    >
+                      Review <ArrowUpRight className="w-3.5 h-3.5" />
+                    </Link>
                   </div>
                 </div>
               );
             })}
+            {pendingApproval.length === 0 ? (
+              <div className="text-sm text-muted-foreground">Tidak ada booking menunggu approval.</div>
+            ) : null}
           </div>
         </Card>
       </div>

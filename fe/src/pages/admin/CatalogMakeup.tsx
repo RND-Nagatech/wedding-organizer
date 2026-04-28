@@ -15,6 +15,7 @@ import { useEffect, useMemo, useState } from "react";
 import { uploadGambar } from "@/lib/api";
 import { formatIDR } from "@/lib/mockData";
 import { RupiahInput } from "@/components/RupiahInput";
+import { statusLabel } from "@/lib/labels";
 
 const API_ORIGIN = (import.meta.env.VITE_API_URL || "http://localhost:5001/api").replace(/\/api\/?$/, "");
 
@@ -275,7 +276,7 @@ const CatalogMakeupPage = () => {
                   <TableCell className="capitalize">{m.kategori}</TableCell>
                   <TableCell>{m.vendor_mua_nama || vendors.find((v) => v.id === m.vendor_mua_id)?.name || "—"}</TableCell>
                   <TableCell className="text-right">{formatIDR(m.harga || 0)}</TableCell>
-                  <TableCell className="capitalize">{m.status}</TableCell>
+                  <TableCell>{statusLabel(String(m.status || ""))}</TableCell>
                   <TableCell className="text-right">
                     <div className="inline-flex gap-2">
                       <MakeupFormDialog
