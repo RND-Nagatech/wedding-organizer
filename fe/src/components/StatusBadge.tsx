@@ -15,6 +15,10 @@ const variants: Record<string, string> = {
   DP: "bg-warning/15 text-warning",
   cicilan: "bg-warning/15 text-warning",
   lunas: "bg-success/15 text-success",
+  draft: "bg-muted text-muted-foreground",
+  aktif: "bg-primary-soft text-primary",
+  selesai: "bg-success/15 text-success",
+  batal: "bg-destructive/10 text-destructive",
 };
 
 export const StatusBadge = ({ status }: { status: string }) => (

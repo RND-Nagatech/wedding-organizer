@@ -26,7 +26,7 @@ export const VendorFormDialog = ({
   const [form, setForm] = useState<any>({
     name: initial?.name ?? "",
     categoryId: initial?.categoryId ?? "",
-    contact: initial?.contact ?? "",
+    // contact: initial?.contact ?? "",
     rating: initial?.rating ?? 4.5,
     priceRange: initial?.priceRange ?? "",
     alamat: initial?.alamat ?? "",
@@ -39,7 +39,7 @@ export const VendorFormDialog = ({
     setForm({
       name: initial?.name ?? "",
       categoryId: initial?.categoryId ?? "",
-      contact: initial?.contact ?? "",
+      // contact: initial?.contact ?? "",
       rating: initial?.rating ?? 4.5,
       priceRange: initial?.priceRange ?? "",
       alamat: initial?.alamat ?? "",
@@ -71,7 +71,7 @@ export const VendorFormDialog = ({
     const next: Record<string, string> = {};
     if (!form.name) next.name = "Nama wajib diisi";
     if (!form.categoryId) next.categoryId = "Kategori wajib diisi";
-    if (!form.contact) next.contact = "Kontak wajib diisi";
+    // if (!form.contact) next.contact = "Kontak wajib diisi";
     if (!form.alamat) next.alamat = "Alamat wajib diisi";
     if (!form.telepon) next.telepon = "Telepon wajib diisi";
     setErrors(next);
@@ -127,11 +127,13 @@ export const VendorFormDialog = ({
               <Input type="number" step="0.1" min="0" max="5" value={form.rating} onChange={(e) => setForm({ ...form, rating: Number(e.target.value) })} />
             </div>
           </div>
+          {/*
           <div className="space-y-1.5">
             <Label>Kontak</Label>
             <Input value={form.contact} onChange={(e) => setForm({ ...form, contact: e.target.value })} placeholder="0812-xxxx-xxxx" />
             {errors.contact ? <div className="text-xs text-destructive">{errors.contact}</div> : null}
           </div>
+          */}
           <div className="space-y-1.5">
             <Label>Alamat</Label>
             <Input value={form.alamat} onChange={(e) => setForm({ ...form, alamat: e.target.value })} placeholder="Alamat vendor" />

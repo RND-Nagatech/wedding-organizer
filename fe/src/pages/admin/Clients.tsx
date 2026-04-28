@@ -89,10 +89,12 @@ const Clients = () => {
                   <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Hari-H</div>
                   <div className="font-display text-base">{c.weddingDate ? formatDate(c.weddingDate) : "-"}</div>
                 </div>
-                <div className="text-right">
-                  <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Paket</div>
-                  <div className="text-sm font-medium text-primary">{pkg?.name ?? "-"}</div>
-                </div>
+                {pkg?.name && (
+                  <div className="text-right">
+                    <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Paket</div>
+                    <div className="text-sm font-medium text-primary">{pkg.name}</div>
+                  </div>
+                )}
               </div>
             </Card>
           );

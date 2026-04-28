@@ -4,6 +4,7 @@ const TtVendorBookingSchema = new mongoose.Schema(
   {
     kode_booking: { type: String, required: true, index: true, trim: true },
     vendor_id: { type: mongoose.Schema.Types.ObjectId, ref: "tm_vendor", required: true, index: true },
+    kategori_vendor_id: { type: mongoose.Schema.Types.ObjectId, ref: "tm_kat_vendor", index: true },
     tanggal_acara: { type: String, required: true, index: true }, // yyyy-mm-dd
     status: {
       type: String,
@@ -11,6 +12,7 @@ const TtVendorBookingSchema = new mongoose.Schema(
       default: "hold",
       index: true,
     },
+    catatan: { type: String, trim: true },
   },
   { timestamps: true }
 );
@@ -18,4 +20,3 @@ const TtVendorBookingSchema = new mongoose.Schema(
 TtVendorBookingSchema.index({ vendor_id: 1, tanggal_acara: 1, status: 1 });
 
 export default mongoose.model("tt_vendor_booking", TtVendorBookingSchema);
-

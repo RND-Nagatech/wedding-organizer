@@ -1,4 +1,5 @@
 import { Navigate, useLocation } from "react-router-dom";
+import { useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { can, type Permission, type Role } from "@/lib/mockData";
 import { Card } from "@/components/ui/card";
@@ -15,7 +16,19 @@ export const ProtectedRoute = ({
 }) => {
   const { user } = useAuth();
   const loc = useLocation();
-  if (!user) return <Navigate to="/login" state={{ from: loc }} replace />;
+
+  // Simpan path terakhir ke localStorage
+  useEffect(() => {
+    if (user) {
+      localStorage.setItem("wo_last_path", loc.pathname + loc.search + loc.hash);
+    }
+  }, [user, loc]);
+
+  if (!user) {
+    // Cek jika ada path terakhir
+    const last = localStorage.getItem("wo_last_path");
+    return <Navigate to={last && last !== "/login" ? last : "/login"} replace />;
+  }
   if (!allow.includes(user.role)) {
     return <Navigate to={user.role === "client" ? "/client" : "/admin"} replace />;
   }

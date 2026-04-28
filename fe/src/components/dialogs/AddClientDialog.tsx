@@ -8,6 +8,7 @@ import { Plus } from "lucide-react";
 import { store, usePackages } from "@/lib/dataStore";
 import { toast } from "sonner";
 import type { Client } from "@/lib/mockData";
+import { RupiahInput } from "@/components/RupiahInput";
 
 export const ClientFormDialog = ({
   mode,
@@ -128,11 +129,11 @@ export const ClientFormDialog = ({
             </div>
             <div className="space-y-1.5">
               <Label>Budget (Rp)</Label>
-              <Input type="number" value={form.budget || ""} onChange={(e) => setForm({ ...form, budget: Number(e.target.value) })} />
+              <RupiahInput value={Number(form.budget) || 0} onValueChange={(v) => setForm({ ...form, budget: v })} placeholder="Rp" />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
+            {/* <div className="space-y-1.5">
               <Label>Paket</Label>
               <Select value={form.packageId} onValueChange={(v) => setForm({ ...form, packageId: v })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
@@ -140,7 +141,7 @@ export const ClientFormDialog = ({
                   {packages.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
                 </SelectContent>
               </Select>
-            </div>
+            </div> */}
             <div className="space-y-1.5">
               <Label>Status</Label>
               <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v as Client["status"] })}>

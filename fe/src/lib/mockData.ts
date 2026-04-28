@@ -51,7 +51,6 @@ export type Vendor = {
   name: string;
   category: string;
   categoryId?: string;
-  contact: string;
   rating: number;
   priceRange: string;
   alamat?: string;
@@ -71,11 +70,17 @@ export type Package = {
 export type Booking = {
   id: string;
   code?: string;
+  clientCode?: string;
+  clientName?: string;
   clientId: string;
   packageId: string;
   eventDate: string;
   venue: string;
   guests: number;
+  adatId?: string;
+  pic?: string;
+  eventStatus?: "draft" | "aktif" | "selesai" | "batal";
+  note?: string;
   vendorSelectedIds?: string[];
   packageSnapshot?: {
     name?: string;
@@ -200,12 +205,12 @@ export const clients: Client[] = [
 ];
 
 export const vendors: Vendor[] = [
-  { id: "v-1", name: "Aroma Catering", category: "Catering", contact: "021-555-1010", rating: 4.8, priceRange: "Rp 75rb–150rb /pax" },
-  { id: "v-2", name: "Bloom & Petals", category: "Dekorasi", contact: "0812-1111-2222", rating: 4.9, priceRange: "Rp 15jt–60jt" },
-  { id: "v-3", name: "Frame Studio", category: "Fotografi", contact: "0813-3333-4444", rating: 4.7, priceRange: "Rp 8jt–35jt" },
-  { id: "v-4", name: "Glow Artistry", category: "MUA", contact: "0856-5555-6666", rating: 5.0, priceRange: "Rp 5jt–20jt" },
-  { id: "v-5", name: "Grand Ballroom Sentosa", category: "Venue", contact: "021-777-8899", rating: 4.6, priceRange: "Rp 30jt–120jt" },
-  { id: "v-6", name: "Harmoni Music", category: "Musik", contact: "0821-9999-0000", rating: 4.8, priceRange: "Rp 6jt–25jt" },
+  { id: "v-1", name: "Aroma Catering", category: "Catering", telepon: "021-555-1010", rating: 4.8, priceRange: "Rp 75rb–150rb /pax" },
+  { id: "v-2", name: "Bloom & Petals", category: "Dekorasi", telepon: "0812-1111-2222", rating: 4.9, priceRange: "Rp 15jt–60jt" },
+  { id: "v-3", name: "Frame Studio", category: "Fotografi", telepon: "0813-3333-4444", rating: 4.7, priceRange: "Rp 8jt–35jt" },
+  { id: "v-4", name: "Glow Artistry", category: "MUA", telepon: "0856-5555-6666", rating: 5.0, priceRange: "Rp 5jt–20jt" },
+  { id: "v-5", name: "Grand Ballroom Sentosa", category: "Venue", telepon: "021-777-8899", rating: 4.6, priceRange: "Rp 30jt–120jt" },
+  { id: "v-6", name: "Harmoni Music", category: "Musik", telepon: "0821-9999-0000", rating: 4.8, priceRange: "Rp 6jt–25jt" },
 ];
 
 export const bookings: Booking[] = [

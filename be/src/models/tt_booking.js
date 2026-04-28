@@ -3,6 +3,16 @@ import mongoose from "mongoose";
 const TtBookingSchema = new mongoose.Schema({
   kode_booking: { type: String, unique: true, trim: true },
   kode_client: { type: String, trim: true },
+  // Tahap 5 fields
+  client_id: { type: String, index: true },
+  nama_client: { type: String, trim: true },
+  paket_id: { type: String, index: true },
+  adat_id: { type: mongoose.Schema.Types.ObjectId, ref: "tm_adat", index: true },
+  pic: { type: String, trim: true },
+  status_event: { type: String, enum: ["draft", "aktif", "selesai", "batal"], default: "draft", index: true },
+  catatan: { type: String, trim: true },
+
+  // Backward-compat (existing)
   id_klien: { type: String, required: true },
   id_paket: { type: String, required: true },
   paket_snapshot: {

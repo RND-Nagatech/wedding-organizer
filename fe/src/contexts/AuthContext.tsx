@@ -6,6 +6,8 @@ type User = {
   email: string;
   role: Role;
   clientId?: string;
+  clientCode?: string;
+  userId?: string;
 };
 
 type AuthCtx = {
@@ -31,6 +33,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const logout = () => {
     setUser(null);
     localStorage.removeItem("wo_user");
+    localStorage.removeItem("wo_remember_email");
+    localStorage.removeItem("wo_remember_password");
   };
 
   return <Ctx.Provider value={{ user, login, logout }}>{children}</Ctx.Provider>;

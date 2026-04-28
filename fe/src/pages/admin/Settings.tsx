@@ -1,12 +1,9 @@
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { mockAccounts } from "@/lib/mockAccounts";
-import { roleLabel } from "@/lib/mockData";
 import { Shield, UserPlus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { Link } from "react-router-dom";
 
 const Settings = () => (
   <>
@@ -19,30 +16,14 @@ const Settings = () => (
             <h3 className="font-display text-xl">Manajemen Tim</h3>
             <p className="text-xs text-muted-foreground mt-0.5">Atur siapa saja yang bisa mengakses sistem</p>
           </div>
-          <Button size="sm" className="bg-primary hover:bg-primary/90">
+          <Button asChild size="sm" className="bg-primary hover:bg-primary/90">
+            <Link to="/admin/settings/users">
             <UserPlus className="w-4 h-4 mr-1.5" /> Tambah Anggota
+            </Link>
           </Button>
         </div>
-        <div className="space-y-2">
-          {mockAccounts
-            .filter((a) => a.role !== "client")
-            .map((a) => (
-              <div key={a.email} className="flex items-center gap-3 p-3 rounded-xl bg-muted/30 hover:bg-muted/60 transition-smooth">
-                <div className="w-10 h-10 rounded-full bg-gradient-primary flex items-center justify-center text-primary-foreground font-medium">
-                  {a.name.charAt(0)}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium truncate">{a.name}</div>
-                  <div className="text-xs text-muted-foreground truncate">{a.email}</div>
-                </div>
-                <span className="px-2.5 py-1 rounded-full bg-primary-soft text-primary text-xs font-medium">
-                  {roleLabel[a.role]}
-                </span>
-                <Button size="icon" variant="ghost" onClick={() => toast.info("Demo mode")}>
-                  <Trash2 className="w-4 h-4 text-muted-foreground" />
-                </Button>
-              </div>
-            ))}
+        <div className="text-sm text-muted-foreground">
+          Kelola user dari menu <span className="font-medium text-foreground">Pengaturan → Manajemen User</span>.
         </div>
       </Card>
 
@@ -73,27 +54,12 @@ const Settings = () => (
     </div>
 
     <Card className="p-6 mt-6 border-border shadow-soft">
-      <h3 className="font-display text-xl mb-5">Profil Bisnis</h3>
-      <div className="grid sm:grid-cols-2 gap-4">
-        <div>
-          <Label>Nama Bisnis</Label>
-          <Input defaultValue="Aurelia Wedding Co." className="mt-1.5" />
-        </div>
-        <div>
-          <Label>Email Kontak</Label>
-          <Input defaultValue="hello@aurelia.com" className="mt-1.5" />
-        </div>
-        <div>
-          <Label>Nomor HP/WA</Label>
-          <Input defaultValue="021-555-1234" className="mt-1.5" />
-        </div>
-        <div>
-          <Label>Kota</Label>
-          <Input defaultValue="Jakarta" className="mt-1.5" />
-        </div>
-      </div>
-      <Button className="mt-5 bg-primary hover:bg-primary/90" onClick={() => toast.success("Pengaturan disimpan")}>
-        Simpan Perubahan
+      <h3 className="font-display text-xl mb-2">Profil Bisnis</h3>
+      <p className="text-sm text-muted-foreground">
+        Atur identitas bisnis di menu <span className="font-medium text-foreground">Pengaturan → Profil Bisnis</span>.
+      </p>
+      <Button asChild className="mt-5 bg-primary hover:bg-primary/90">
+        <Link to="/admin/settings/profile">Buka Profil Bisnis</Link>
       </Button>
     </Card>
   </>

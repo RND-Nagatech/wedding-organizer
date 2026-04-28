@@ -9,6 +9,7 @@ import { store, useVendors } from "@/lib/dataStore";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
 import type { Package } from "@/lib/mockData";
+import { RupiahInput } from "@/components/RupiahInput";
 
 export const PackageFormDialog = ({
   mode,
@@ -90,7 +91,7 @@ export const PackageFormDialog = ({
           </div>
           <div className="space-y-1.5">
             <Label>Harga (Rp)</Label>
-            <Input type="number" value={price || ""} onChange={(e) => setPrice(Number(e.target.value))} />
+            <RupiahInput value={Number(price) || 0} onValueChange={(v) => setPrice(v)} placeholder="Rp" />
             {errors.price ? <div className="text-xs text-destructive">{errors.price}</div> : null}
           </div>
           <div className="space-y-1.5">

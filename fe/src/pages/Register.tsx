@@ -7,6 +7,8 @@ import { Card } from "@/components/ui/card";
 import { Heart, ArrowLeft } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { registerClientApp } from "@/lib/api";
+import { useSystemProfile } from "@/contexts/SystemProfileContext";
 
 const Register = () => {
   const [form, setForm] = useState({
@@ -18,25 +20,37 @@ const Register = () => {
   });
   const { login } = useAuth();
   const nav = useNavigate();
+  const { profile } = useSystemProfile();
 
   const update = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm((f) => ({ ...f, [k]: e.target.value }));
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name.trim() || !form.email.trim() || form.password.length < 6) {
       toast.error("Lengkapi semua data dan password minimal 6 karakter");
       return;
     }
-    // Mock: langsung login sebagai klien baru
-    login({
-      name: form.name,
-      email: form.email,
-      role: "client",
-      clientId: "c-001", // pakai data demo agar dashboard terlihat
-    });
-    toast.success(`Selamat datang, ${form.name}! Akun Anda berhasil dibuat.`);
-    nav("/client");
+    try {
+      const u = await registerClientApp({
+        nama_klien: form.name,
+        pasangan: form.partner || "-",
+        email: form.email,
+        telepon: form.phone || "-",
+        password: form.password,
+      });
+      login({
+        name: u.name,
+        email: u.email,
+        role: "client",
+        clientId: u.clientId,
+        clientCode: u.clientCode,
+      });
+      toast.success(`Selamat datang, ${u.name}! Akun Anda berhasil dibuat.`);
+      nav("/client");
+    } catch (err: any) {
+      toast.error(err?.message || "Gagal mendaftar");
+    }
   };
 
   return (
@@ -49,8 +63,8 @@ const Register = () => {
               <Heart className="w-4 h-4 text-primary-foreground fill-primary-foreground" />
             </div>
             <div>
-              <div className="font-display text-lg leading-none">Aurelia</div>
-              <div className="text-[10px] text-muted-foreground tracking-[0.2em] uppercase">Wedding Co.</div>
+              <div className="font-display text-lg leading-none">{profile?.nama_bisnis || "Wedding Organizer"}</div>
+              <div className="text-[10px] text-muted-foreground tracking-[0.2em] uppercase">Management System</div>
             </div>
           </Link>
         </div>

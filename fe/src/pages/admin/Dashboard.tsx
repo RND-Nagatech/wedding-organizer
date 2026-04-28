@@ -1,12 +1,21 @@
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
-import { bookings, clients, formatDate, formatIDR, invoices, packages, vendors } from "@/lib/mockData";
+import { formatDate, formatIDR } from "@/lib/mockData";
+import { useClients, useVendors, usePackages, useBookings, useInvoices } from "@/lib/dataStore";
 import { CalendarDays, Users, Receipt, TrendingUp, Heart, ArrowUpRight } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useSystemProfile } from "@/contexts/SystemProfileContext";
 
 const AdminDashboard = () => {
-  const totalRevenue = invoices.reduce((s, i) => s + i.paid, 0);
+  const { profile } = useSystemProfile();
+  const clients = useClients();
+  const vendors = useVendors();
+  const packages = usePackages();
+  const bookings = useBookings();
+  const invoices = useInvoices();
+
+  const totalRevenue = invoices.reduce((s, i) => s + (i.paid || i.dibayar || 0), 0);
   const upcoming = bookings
     .filter((b) => new Date(b.eventDate) >= new Date())
     .sort((a, b) => +new Date(a.eventDate) - +new Date(b.eventDate));
@@ -22,7 +31,7 @@ const AdminDashboard = () => {
     <>
       <PageHeader
         title="Selamat datang kembali ✨"
-        subtitle="Berikut ringkasan operasi Aurelia Wedding Co. hari ini."
+        subtitle={`Berikut ringkasan operasi ${profile?.nama_bisnis || "Wedding Organizer"} hari ini.`}
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">

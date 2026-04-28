@@ -2,10 +2,12 @@ import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Heart, Sparkles, CalendarHeart, Users, Award, ArrowRight } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSystemProfile } from "@/contexts/SystemProfileContext";
 import heroImg from "@/assets/hero-wedding.jpg";
 
 const Landing = () => {
   const { user } = useAuth();
+  const { profile } = useSystemProfile();
   const nav = useNavigate();
 
   const goDashboard = () => {
@@ -22,8 +24,8 @@ const Landing = () => {
             <Heart className="w-4 h-4 text-primary-foreground fill-primary-foreground" />
           </div>
           <div>
-            <div className="font-display text-lg leading-none">Aurelia</div>
-            <div className="text-[10px] text-muted-foreground tracking-[0.2em] uppercase">Wedding Co.</div>
+            <div className="font-display text-lg leading-none">{profile?.nama_bisnis || "Wedding Organizer"}</div>
+            <div className="text-[10px] text-muted-foreground tracking-[0.2em] uppercase">Management System</div>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -57,8 +59,8 @@ const Landing = () => {
               <em className="text-primary">dirayakan dengan sempurna.</em>
             </h1>
             <p className="mt-6 text-lg text-muted-foreground max-w-xl leading-relaxed">
-              Aurelia adalah wedding organizer modern yang menggabungkan estetika minimalis dengan
-              perencanaan terstruktur — agar hari spesial Anda berjalan tanpa cela.
+              {profile?.nama_bisnis || "Wedding Organizer"} membantu Anda memilih paket, vendor, timeline, dan pembayaran
+              dengan alur kerja yang jelas — agar hari spesial berjalan tanpa cela.
             </p>
             <div className="mt-8 flex flex-col sm:flex-row gap-3">
               <Button size="lg" onClick={goDashboard} className="bg-primary hover:bg-primary/90 shadow-elegant">
@@ -137,7 +139,7 @@ const Landing = () => {
       </section>
 
       <footer className="border-t border-border py-8 px-6 text-center text-sm text-muted-foreground">
-        © {new Date().getFullYear()} Aurelia Wedding Co. — Crafted with love.
+        © {new Date().getFullYear()} {profile?.nama_bisnis || "Wedding Organizer"} — Wedding Organizer Management System.
       </footer>
     </div>
   );

@@ -6,34 +6,47 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Heart } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { mockAccounts } from "@/lib/mockAccounts";
 import { toast } from "sonner";
+import { loginApp } from "@/lib/api";
+import { useSystemProfile } from "@/contexts/SystemProfileContext";
+
 
 const Login = () => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState(() => localStorage.getItem("wo_remember_email") || "");
+  const [password, setPassword] = useState(() => localStorage.getItem("wo_remember_password") || "");
+  const [remember, setRemember] = useState(() => !!localStorage.getItem("wo_remember_email"));
   const { login } = useAuth();
   const nav = useNavigate();
+  const { profile } = useSystemProfile();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const account = mockAccounts.find((a) => a.email.toLowerCase() === email.toLowerCase());
-    if (!account) {
-      toast.error("Email tidak terdaftar. Coba salah satu akun demo di bawah.");
+    if (password.length < 6) {
+      toast.error("Password minimal 6 karakter");
       return;
     }
-    if (password.length < 4) {
-      toast.error("Password minimal 4 karakter");
-      return;
+    try {
+      const u = await loginApp({ email, password });
+      login({
+        name: u.name,
+        email: u.email,
+        role: u.role,
+        clientId: u.clientId,
+        clientCode: u.clientCode,
+        userId: u.userId,
+      });
+      if (remember) {
+        localStorage.setItem("wo_remember_email", email);
+        localStorage.setItem("wo_remember_password", password);
+      } else {
+        localStorage.removeItem("wo_remember_email");
+        localStorage.removeItem("wo_remember_password");
+      }
+      toast.success(`Selamat datang, ${u.name}!`);
+      nav(u.role === "client" ? "/client" : "/admin");
+    } catch (err: any) {
+      toast.error(err?.message || "Gagal login");
     }
-    login({
-      name: account.name,
-      email: account.email,
-      role: account.role,
-      clientId: account.clientId,
-    });
-    toast.success(`Selamat datang, ${account.name}!`);
-    nav(account.role === "client" ? "/client" : "/admin");
   };
 
   return (
@@ -46,8 +59,8 @@ const Login = () => {
               <Heart className="w-4 h-4 text-primary-foreground fill-primary-foreground" />
             </div>
             <div>
-              <div className="font-display text-lg leading-none">Aurelia</div>
-              <div className="text-[10px] text-muted-foreground tracking-[0.2em] uppercase">Wedding Co.</div>
+              <div className="font-display text-lg leading-none">{profile?.nama_bisnis || "Wedding Organizer"}</div>
+              <div className="text-[10px] text-muted-foreground tracking-[0.2em] uppercase">Management System</div>
             </div>
           </Link>
         </div>
@@ -57,7 +70,7 @@ const Login = () => {
             Selamat datang kembali.
           </h2>
           <p className="mt-4 text-muted-foreground leading-relaxed">
-            Lanjutkan merencanakan hari sempurna Anda bersama tim Aurelia. Setiap detail kami pastikan terjaga.
+            Masuk untuk mengelola paket, vendor, event, pembayaran, dan progress persiapan.
           </p>
           <div className="mt-12 p-6 rounded-2xl bg-card/60 backdrop-blur border border-border shadow-soft">
             <p className="text-sm italic text-foreground/80 font-display">
@@ -76,7 +89,7 @@ const Login = () => {
           <div className="lg:hidden mb-8">
             <Link to="/" className="flex items-center gap-2">
               <Heart className="w-5 h-5 text-primary fill-primary" />
-              <span className="font-display text-xl">Aurelia</span>
+              <span className="font-display text-xl">{profile?.nama_bisnis || "Wedding Organizer"}</span>
             </Link>
           </div>
 
@@ -111,30 +124,21 @@ const Login = () => {
                   required
                 />
               </div>
-              <Button type="submit" className="w-full bg-primary hover:bg-primary/90">
-                Masuk
-              </Button>
+              <div className="flex items-center justify-between">
+                <label className="flex items-center gap-2 text-sm select-none">
+                  <input
+                    type="checkbox"
+                    checked={remember}
+                    onChange={e => setRemember(e.target.checked)}
+                    className="accent-primary"
+                  />
+                  Ingat saya
+                </label>
+                <Button type="submit" className="bg-primary hover:bg-primary/90">
+                  Masuk
+                </Button>
+              </div>
             </form>
-          </Card>
-
-          {/* Demo accounts */}
-          <Card className="mt-4 p-4 border-dashed border-border bg-muted/30">
-            <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium mb-2">
-              Akun Demo (klik untuk pakai)
-            </div>
-            <div className="grid grid-cols-2 gap-1.5">
-              {mockAccounts.map((a) => (
-                <button
-                  key={a.email}
-                  type="button"
-                  onClick={() => { setEmail(a.email); setPassword("demo1234"); }}
-                  className="text-left px-2.5 py-1.5 rounded-md hover:bg-card transition-smooth text-xs"
-                >
-                  <div className="font-medium capitalize">{a.role}</div>
-                  <div className="text-muted-foreground truncate">{a.email}</div>
-                </button>
-              ))}
-            </div>
           </Card>
 
           <p className="text-center text-sm text-muted-foreground mt-6">

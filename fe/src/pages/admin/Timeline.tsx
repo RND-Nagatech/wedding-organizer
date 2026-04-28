@@ -1,72 +1,430 @@
-import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/PageHeader";
-import { Checkbox } from "@/components/ui/checkbox";
-import { bookings, checklist as initial, clients, formatDate } from "@/lib/mockData";
-import { useMemo, useState } from "react";
-import { CalendarDays } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ConfirmActionDialog } from "@/components/dialogs/ConfirmActionDialog";
+import { store, useBookings, useTimelineEvent, type TimelineEventTask } from "@/lib/dataStore";
+import { formatDate } from "@/lib/mockData";
+import { toast } from "sonner";
+import { Pencil, Plus, Trash2 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 
-const Timeline = ({ bookingId }: { bookingId?: string }) => {
-  const targetBookingId = bookingId || "b-001";
-  const [items, setItems] = useState(initial);
-
-  const list = useMemo(
-    () => items.filter((i) => i.bookingId === targetBookingId).sort((a, b) => +new Date(a.dueDate) - +new Date(b.dueDate)),
-    [items, targetBookingId]
+function TaskFormDialog({
+  mode,
+  initial,
+  trigger,
+  fixedKodeBooking,
+}: {
+  mode: "add" | "edit";
+  initial?: TimelineEventTask;
+  fixedKodeBooking?: string;
+  trigger: React.ReactNode;
+}) {
+  const bookings = useBookings();
+  const bookingOptions = useMemo(
+    () =>
+      bookings
+        .map((b) => ({
+          code: b.code || "",
+          label: `${(b.code || "").toUpperCase()} · ${b.clientName || "—"}`,
+        }))
+        .filter((x) => x.code),
+    [bookings]
   );
 
-  const booking = bookings.find((b) => b.id === targetBookingId);
-  const client = clients.find((c) => c.id === booking?.clientId);
-  const done = list.filter((i) => i.done).length;
-  const progress = list.length ? Math.round((done / list.length) * 100) : 0;
+  const [open, setOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [form, setForm] = useState<any>({
+    kode_booking: "",
+    nama_tugas: "",
+    kategori_tugas: "",
+    deadline: "",
+    pic: "",
+    status: "belum_dikerjakan",
+    catatan: "",
+  });
 
-  const toggle = (id: string) => setItems((prev) => prev.map((i) => (i.id === id ? { ...i, done: !i.done } : i)));
+  useEffect(() => {
+    if (!open) return;
+    setErrors({});
+    setForm({
+      kode_booking: fixedKodeBooking || initial?.kode_booking || bookingOptions[0]?.code || "",
+      nama_tugas: initial?.nama_tugas || "",
+      kategori_tugas: initial?.kategori_tugas || "",
+      deadline: initial?.deadline || "",
+      pic: initial?.pic || "",
+      status: initial?.status || "belum_dikerjakan",
+      catatan: initial?.catatan || "",
+    });
+  }, [open, initial, bookingOptions, fixedKodeBooking]);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const next: Record<string, string> = {};
+    if (!form.kode_booking) next.kode_booking = "Kode booking wajib diisi";
+    if (!form.nama_tugas) next.nama_tugas = "Nama tugas wajib diisi";
+    if (!form.deadline) next.deadline = "Deadline wajib diisi";
+    setErrors(next);
+    if (Object.keys(next).length) {
+      toast.error("Lengkapi field yang wajib diisi");
+      return;
+    }
+
+    try {
+      setSaving(true);
+      const payload = {
+        kode_booking: form.kode_booking,
+        nama_tugas: form.nama_tugas,
+        kategori_tugas: form.kategori_tugas || undefined,
+        deadline: form.deadline,
+        pic: form.pic || undefined,
+        status: form.status,
+        catatan: form.catatan || undefined,
+      };
+      if (mode === "add") {
+        await store.addTimelineEventTask(payload);
+        toast.success("Tugas berhasil ditambahkan");
+      } else if (initial?.id) {
+        await store.updateTimelineEventTask(initial.id, payload);
+        toast.success("Tugas berhasil diperbarui");
+      }
+      setOpen(false);
+    } catch (err: any) {
+      toast.error(err?.message || "Gagal menyimpan tugas");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>{trigger}</DialogTrigger>
+      <DialogContent className="sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle className="font-display text-2xl">
+            {mode === "add" ? "Tambah Tugas Timeline" : "Edit Tugas Timeline"}
+          </DialogTitle>
+        </DialogHeader>
+
+        <form onSubmit={submit} className="space-y-4">
+          <div className="grid sm:grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label>Booking</Label>
+              <Select
+                value={form.kode_booking}
+                onValueChange={(v) => setForm((f: any) => ({ ...f, kode_booking: v }))}
+                disabled={saving || Boolean(fixedKodeBooking)}
+              >
+                <SelectTrigger><SelectValue placeholder="Pilih booking" /></SelectTrigger>
+                <SelectContent>
+                  {bookingOptions.map((b) => (
+                    <SelectItem key={b.code} value={b.code}>
+                      {b.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.kode_booking ? <div className="text-xs text-destructive">{errors.kode_booking}</div> : null}
+            </div>
+            <div className="space-y-1.5">
+              <Label>Status</Label>
+              <Select value={form.status} onValueChange={(v) => setForm((f: any) => ({ ...f, status: v }))} disabled={saving}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="belum_dikerjakan">Belum dikerjakan</SelectItem>
+                  <SelectItem value="proses">Proses</SelectItem>
+                  <SelectItem value="selesai">Selesai</SelectItem>
+                  <SelectItem value="terlambat">Terlambat</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="grid sm:grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label>Nama Tugas</Label>
+              <Input value={form.nama_tugas} onChange={(e) => setForm((f: any) => ({ ...f, nama_tugas: e.target.value }))} disabled={saving} />
+              {errors.nama_tugas ? <div className="text-xs text-destructive">{errors.nama_tugas}</div> : null}
+            </div>
+            <div className="space-y-1.5">
+              <Label>Kategori Tugas (Opsional)</Label>
+              <Input value={form.kategori_tugas} onChange={(e) => setForm((f: any) => ({ ...f, kategori_tugas: e.target.value }))} disabled={saving} />
+            </div>
+          </div>
+
+          <div className="grid sm:grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label>Deadline</Label>
+              <Input type="date" value={form.deadline} onChange={(e) => setForm((f: any) => ({ ...f, deadline: e.target.value }))} disabled={saving} />
+              {errors.deadline ? <div className="text-xs text-destructive">{errors.deadline}</div> : null}
+            </div>
+            <div className="space-y-1.5">
+              <Label>PIC (Opsional)</Label>
+              <Input value={form.pic} onChange={(e) => setForm((f: any) => ({ ...f, pic: e.target.value }))} disabled={saving} />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>Catatan (Opsional)</Label>
+            <Textarea value={form.catatan} onChange={(e) => setForm((f: any) => ({ ...f, catatan: e.target.value }))} disabled={saving} />
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={saving}>
+              Batal
+            </Button>
+            <Button type="submit" className="bg-primary hover:bg-primary/90" disabled={saving}>
+              {saving ? "Menyimpan..." : "Simpan"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+const Timeline = ({ bookingId }: { bookingId?: string }) => {
+  const bookings = useBookings();
+  const tasks = useTimelineEvent();
+
+  const bookingOptions = useMemo(
+    () =>
+      bookings
+        .map((b) => ({ id: b.id, code: b.code || "", label: `${(b.code || "").toUpperCase()} · ${b.clientName || "—"}` }))
+        .filter((x) => x.code),
+    [bookings]
+  );
+
+  const fixedBooking = bookingId ? bookings.find((b) => b.id === bookingId) : undefined;
+  const [kodeBooking, setKodeBooking] = useState<string>("all");
+  const [pic, setPic] = useState<string>("all");
+  const [status, setStatus] = useState<string>("all");
+  const [q, setQ] = useState("");
+
+  useEffect(() => {
+    if (fixedBooking?.code) setKodeBooking(fixedBooking.code);
+  }, [fixedBooking?.code]);
+
+  const filtered = tasks.filter((t) => {
+    const kb = fixedBooking?.code ? fixedBooking.code : kodeBooking !== "all" ? kodeBooking : null;
+    if (kb && t.kode_booking !== kb) return false;
+    if (pic !== "all" && (t.pic || "") !== pic) return false;
+    if (status !== "all" && t.status !== status) return false;
+    if (q) {
+      const hay = `${t.nama_tugas} ${t.kategori_tugas || ""} ${t.catatan || ""}`.toLowerCase();
+      if (!hay.includes(q.toLowerCase())) return false;
+    }
+    return true;
+  });
+
+  const selectedKodeBooking = fixedBooking?.code || (kodeBooking !== "all" ? kodeBooking : "");
+  const selectedTasks = selectedKodeBooking ? tasks.filter((t) => t.kode_booking === selectedKodeBooking) : filtered;
+  const done = selectedTasks.filter((t) => t.status === "selesai").length;
+  const progress = selectedTasks.length ? Math.round((done / selectedTasks.length) * 100) : 0;
+
+  const progressByBooking = useMemo(() => {
+    const map = new Map<string, { total: number; done: number }>();
+    for (const t of tasks) {
+      const cur = map.get(t.kode_booking) || { total: 0, done: 0 };
+      cur.total += 1;
+      if (t.status === "selesai") cur.done += 1;
+      map.set(t.kode_booking, cur);
+    }
+    return Array.from(map.entries()).map(([kb, v]) => ({
+      kode_booking: kb,
+      total: v.total,
+      done: v.done,
+      percent: v.total ? Math.round((v.done / v.total) * 100) : 0,
+    }));
+  }, [tasks]);
+
+  const picOptions = useMemo(() => {
+    const set = new Set<string>();
+    tasks.forEach((t) => {
+      if (t.pic) set.add(t.pic);
+    });
+    return Array.from(set).sort();
+  }, [tasks]);
 
   return (
     <>
       <PageHeader
-        title="Timeline & Checklist"
-        subtitle={client ? `${client.name} & ${client.partner} — ${formatDate(booking!.eventDate)}` : "Persiapan acara"}
+        title="Timeline & Checklist Event"
+        subtitle="Monitoring progress persiapan event"
+        actions={
+          <TaskFormDialog
+            mode="add"
+            fixedKodeBooking={selectedKodeBooking || undefined}
+            trigger={
+              <Button className="bg-primary hover:bg-primary/90">
+                <Plus className="w-4 h-4 mr-1.5" /> Tambah
+              </Button>
+            }
+          />
+        }
       />
 
-      <Card className="p-6 border-border shadow-soft mb-6 bg-gradient-card">
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <div className="text-xs uppercase tracking-wider text-muted-foreground">Progres Persiapan</div>
-            <div className="font-display text-2xl mt-1">{done} / {list.length} selesai</div>
+      <div className="grid lg:grid-cols-3 gap-4 mb-6">
+        <Card className="p-5 border-border shadow-soft bg-gradient-card lg:col-span-1">
+          <div className="text-xs uppercase tracking-wider text-muted-foreground">Progress Booking</div>
+          <div className="font-display text-3xl text-primary mt-2">{progress}%</div>
+          <div className="text-sm text-muted-foreground mt-1">{done} / {selectedTasks.length} selesai</div>
+          <div className="mt-3 h-2 bg-muted rounded-full overflow-hidden">
+            <div className="h-full bg-gradient-primary transition-smooth" style={{ width: `${progress}%` }} />
           </div>
-          <div className="font-display text-4xl text-primary">{progress}%</div>
+        </Card>
+
+        <Card className="p-5 border-border shadow-soft bg-gradient-card lg:col-span-2">
+          <div className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Progress per Booking</div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="text-xs uppercase tracking-wider text-muted-foreground">
+                <tr>
+                  <th className="text-left py-2 pr-3 font-medium">Booking</th>
+                  <th className="text-left py-2 pr-3 font-medium">Selesai</th>
+                  <th className="text-left py-2 pr-3 font-medium">%</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {progressByBooking.slice(0, 6).map((r) => (
+                  <tr key={r.kode_booking}>
+                    <td className="py-2 pr-3 font-medium">{r.kode_booking.toUpperCase()}</td>
+                    <td className="py-2 pr-3">{r.done} / {r.total}</td>
+                    <td className="py-2 pr-3 text-primary font-medium">{r.percent}%</td>
+                  </tr>
+                ))}
+                {progressByBooking.length === 0 ? (
+                  <tr><td className="py-3 text-muted-foreground" colSpan={3}>—</td></tr>
+                ) : null}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      </div>
+
+      <Card className="border-border shadow-soft overflow-hidden">
+        <div className="p-4 border-b border-border bg-muted/20">
+          <div className="grid sm:grid-cols-4 gap-3">
+            <div className="space-y-1.5">
+              <Label>Booking</Label>
+              <Select
+                value={fixedBooking?.code ? fixedBooking.code : kodeBooking}
+                onValueChange={setKodeBooking}
+                disabled={Boolean(fixedBooking?.code)}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua</SelectItem>
+                  {bookingOptions.map((b) => (
+                    <SelectItem key={b.code} value={b.code}>{b.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>PIC</Label>
+              <Select value={pic} onValueChange={setPic}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua</SelectItem>
+                  {picOptions.map((p) => (
+                    <SelectItem key={p} value={p}>{p}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Status</Label>
+              <Select value={status} onValueChange={setStatus}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua</SelectItem>
+                  <SelectItem value="belum_dikerjakan">Belum dikerjakan</SelectItem>
+                  <SelectItem value="proses">Proses</SelectItem>
+                  <SelectItem value="selesai">Selesai</SelectItem>
+                  <SelectItem value="terlambat">Terlambat</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Cari</Label>
+              <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Nama tugas / catatan..." />
+            </div>
+          </div>
         </div>
-        <div className="h-2 bg-muted rounded-full overflow-hidden">
-          <div className="h-full bg-gradient-primary transition-smooth" style={{ width: `${progress}%` }} />
+
+        <div className="p-4">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Booking</TableHead>
+                <TableHead>Tugas</TableHead>
+                <TableHead>Kategori</TableHead>
+                <TableHead>Deadline</TableHead>
+                <TableHead>PIC</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Aksi</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filtered.map((t) => (
+                <TableRow key={t.id}>
+                  <TableCell className="font-medium">{(t.kode_booking || "—").toUpperCase()}</TableCell>
+                  <TableCell>{t.nama_tugas}</TableCell>
+                  <TableCell>{t.kategori_tugas || "—"}</TableCell>
+                  <TableCell>{formatDate(t.deadline)}</TableCell>
+                  <TableCell>{t.pic || "—"}</TableCell>
+                  <TableCell className="capitalize">{t.status.replaceAll("_", " ")}</TableCell>
+                  <TableCell className="text-right">
+                    <div className="inline-flex gap-2">
+                      <TaskFormDialog
+                        mode="edit"
+                        initial={t}
+                        trigger={
+                          <Button size="icon" variant="outline">
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                        }
+                      />
+                      <ConfirmActionDialog
+                        title="Hapus tugas?"
+                        description="Tugas timeline akan dihapus permanen."
+                        confirmText="Hapus"
+                        onConfirm={async () => {
+                          try {
+                            await store.deleteTimelineEventTask(t.id);
+                            toast.success("Tugas berhasil dihapus");
+                          } catch (err: any) {
+                            toast.error(err?.message || "Gagal menghapus tugas");
+                          }
+                        }}
+                        trigger={
+                          <Button size="icon" variant="destructive">
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        }
+                      />
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {filtered.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                    Tidak ada data
+                  </TableCell>
+                </TableRow>
+              ) : null}
+            </TableBody>
+          </Table>
         </div>
       </Card>
-
-      <div className="relative">
-        <div className="absolute left-[19px] top-2 bottom-2 w-px bg-border" />
-        <div className="space-y-3">
-          {list.map((item) => (
-            <div key={item.id} className="relative pl-12">
-              <div className={`absolute left-3 top-4 w-4 h-4 rounded-full border-2 ${
-                item.done ? "bg-primary border-primary" : "bg-background border-border"
-              }`} />
-              <Card className={`p-4 border-border transition-smooth ${item.done ? "bg-muted/30" : "shadow-soft"}`}>
-                <div className="flex items-center gap-3">
-                  <Checkbox checked={item.done} onCheckedChange={() => toggle(item.id)} />
-                  <div className="flex-1 min-w-0">
-                    <div className={`font-medium ${item.done ? "line-through text-muted-foreground" : ""}`}>
-                      {item.title}
-                    </div>
-                    <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-3">
-                      <span className="flex items-center gap-1"><CalendarDays className="w-3 h-3" /> {formatDate(item.dueDate)}</span>
-                      <span className="px-2 py-0.5 rounded-full bg-accent-soft text-accent-foreground">{item.category}</span>
-                    </div>
-                  </div>
-                </div>
-              </Card>
-            </div>
-          ))}
-        </div>
-      </div>
     </>
   );
 };
