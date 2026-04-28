@@ -159,6 +159,10 @@ const KeuanganPage = () => {
   const [kategori, setKategori] = useState<string>("all");
   const [q, setQ] = useState("");
 
+
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(10);
+
   const filtered = useMemo(() => {
     return list.filter((r) => {
       if (tglFrom && r.tgl_trx < tglFrom) return false;
@@ -171,6 +175,11 @@ const KeuanganPage = () => {
       return true;
     });
   }, [list, tglFrom, tglTo, kategori, q]);
+  const totalPages = Math.ceil(filtered.length / perPage);
+  const pagedList = filtered.slice((page - 1) * perPage, page * perPage);
+
+  // Reset page ke 1 jika filter berubah
+  useEffect(() => { setPage(1); }, [tglFrom, tglTo, kategori, q, perPage]);
 
   const totalIn = filtered.reduce((s, r) => s + (Number(r.jumlah_in) || 0), 0);
   const totalOut = filtered.reduce((s, r) => s + (Number(r.jumlah_out) || 0), 0);
@@ -247,7 +256,7 @@ const KeuanganPage = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.map((r) => {
+              {pagedList.map((r) => {
                 const locked = r.ref_type === "payment";
                 return (
                   <TableRow key={r.id}>
@@ -297,7 +306,7 @@ const KeuanganPage = () => {
                   </TableRow>
                 );
               })}
-              {filtered.length === 0 ? (
+              {pagedList.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center text-muted-foreground py-10">
                     Tidak ada data
@@ -306,6 +315,31 @@ const KeuanganPage = () => {
               ) : null}
             </TableBody>
           </Table>
+        </div>
+
+        {/* Pagination Controls */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 pt-0">
+          <div className="flex items-center gap-2">
+            <span className="text-sm">Tampilkan</span>
+            <Select value={String(perPage)} onValueChange={v => { setPerPage(Number(v)); setPage(1); }}>
+              <SelectTrigger className="w-20"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="20">20</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+              </SelectContent>
+            </Select>
+            <span className="text-sm">per halaman</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage(page - 1)}>
+              &lt;
+            </Button>
+            <span className="text-sm">Halaman {page} dari {totalPages || 1}</span>
+            <Button variant="outline" size="sm" disabled={page === totalPages || totalPages === 0} onClick={() => setPage(page + 1)}>
+              &gt;
+            </Button>
+          </div>
         </div>
       </Card>
     </>

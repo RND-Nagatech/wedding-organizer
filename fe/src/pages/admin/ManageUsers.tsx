@@ -9,11 +9,19 @@ import { UserFormDialog } from "@/components/dialogs/UserFormDialog";
 import { ConfirmUserDeleteDialog } from "@/components/dialogs/ConfirmUserDeleteDialog";
 
 const ManageUsers = () => {
+
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [editUser, setEditUser] = useState<any>(null);
   const [deleteUser, setDeleteUser] = useState<any>(null);
   const [openAdd, setOpenAdd] = useState(false);
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(10);
+
+  const totalPages = Math.ceil(users.length / perPage);
+  const pagedList = users.slice((page - 1) * perPage, page * perPage);
+
+  useEffect(() => { setPage(1); }, [perPage]);
 
   const refresh = async () => setUsers(await ambilUser());
   useEffect(() => { refresh(); }, []);
@@ -49,7 +57,7 @@ const ManageUsers = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {users.map((user) => (
+              {pagedList.map((user) => (
                 <TableRow key={user._id}>
                   <TableCell className="font-medium">{user.nama}</TableCell>
                   <TableCell>{user.email}</TableCell>
@@ -90,10 +98,43 @@ const ManageUsers = () => {
                   </TableCell>
                 </TableRow>
               ))}
+              {pagedList.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center text-muted-foreground py-10">
+                    Tidak ada data
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </div>
       </Card>
+
+      {/* Pagination Controls */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 pt-0">
+        <div className="flex items-center gap-2">
+          <span className="text-sm">Tampilkan</span>
+          <select
+            className="border rounded px-2 py-1 text-sm"
+            value={perPage}
+            onChange={e => { setPerPage(Number(e.target.value)); setPage(1); }}
+          >
+            <option value={10}>10</option>
+            <option value={20}>20</option>
+            <option value={50}>50</option>
+          </select>
+          <span className="text-sm">per halaman</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage(page - 1)}>
+            &lt;
+          </Button>
+          <span className="text-sm">Halaman {page} dari {totalPages || 1}</span>
+          <Button variant="outline" size="sm" disabled={page === totalPages || totalPages === 0} onClick={() => setPage(page + 1)}>
+            &gt;
+          </Button>
+        </div>
+      </div>
     </>
   );
 };

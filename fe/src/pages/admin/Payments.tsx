@@ -35,6 +35,10 @@ const Payments = ({
     [clients]
   );
 
+
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(10);
+
   const list = payments.filter((p) => {
     if (kodeBooking !== "all" && p.bookingCode !== kodeBooking) return false;
     if (kodeClient !== "all" && p.clientCode !== kodeClient) return false;
@@ -48,6 +52,11 @@ const Payments = ({
     }
     return true;
   });
+  const totalPages = Math.ceil(list.length / perPage);
+  const pagedList = list.slice((page - 1) * perPage, page * perPage);
+
+  // Reset page ke 1 jika filter berubah
+  useMemo(() => { setPage(1); }, [kodeBooking, kodeClient, status, q, perPage]);
 
   const totalPaid = list.reduce((s, p) => s + p.amountPaid, 0);
   // Sisa tagihan dihitung per booking: ambil sisa terakhir dari masing-masing kode_booking (bukan akumulasi semua transaksi)
@@ -152,7 +161,7 @@ const Payments = ({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {list.map((p) => (
+              {pagedList.map((p) => (
                 <TableRow key={p.id} className="hover:bg-muted/30 transition-smooth">
                   <TableCell className="font-medium">{p.code}</TableCell>
                   <TableCell>{p.bookingCode}</TableCell>
@@ -203,7 +212,7 @@ const Payments = ({
                   )}
                 </TableRow>
               ))}
-              {list.length === 0 ? (
+              {pagedList.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={readOnly ? 9 : 10} className="text-center text-muted-foreground py-10">
                     Belum ada transaksi pembayaran.
@@ -214,6 +223,31 @@ const Payments = ({
           </Table>
         </div>
       </Card>
+
+      {/* Pagination Controls */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4">
+        <div className="flex items-center gap-2">
+          <span className="text-sm">Tampilkan</span>
+          <Select value={String(perPage)} onValueChange={v => { setPerPage(Number(v)); setPage(1); }}>
+            <SelectTrigger className="w-20"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="10">10</SelectItem>
+              <SelectItem value="20">20</SelectItem>
+              <SelectItem value="50">50</SelectItem>
+            </SelectContent>
+          </Select>
+          <span className="text-sm">per halaman</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage(page - 1)}>
+            &lt;
+          </Button>
+          <span className="text-sm">Halaman {page} dari {totalPages || 1}</span>
+          <Button variant="outline" size="sm" disabled={page === totalPages || totalPages === 0} onClick={() => setPage(page + 1)}>
+            &gt;
+          </Button>
+        </div>
+      </div>
     </>
   );
 };

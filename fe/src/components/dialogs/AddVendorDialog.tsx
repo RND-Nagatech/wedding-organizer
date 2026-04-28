@@ -26,7 +26,6 @@ export const VendorFormDialog = ({
   const [form, setForm] = useState<any>({
     name: initial?.name ?? "",
     categoryId: initial?.categoryId ?? "",
-    // contact: initial?.contact ?? "",
     rating: initial?.rating ?? 4.5,
     priceRange: initial?.priceRange ?? "",
     alamat: initial?.alamat ?? "",
@@ -39,7 +38,6 @@ export const VendorFormDialog = ({
     setForm({
       name: initial?.name ?? "",
       categoryId: initial?.categoryId ?? "",
-      // contact: initial?.contact ?? "",
       rating: initial?.rating ?? 4.5,
       priceRange: initial?.priceRange ?? "",
       alamat: initial?.alamat ?? "",
@@ -71,7 +69,7 @@ export const VendorFormDialog = ({
     const next: Record<string, string> = {};
     if (!form.name) next.name = "Nama wajib diisi";
     if (!form.categoryId) next.categoryId = "Kategori wajib diisi";
-    // if (!form.contact) next.contact = "Kontak wajib diisi";
+    // kontak sudah tidak digunakan, validasi dihapus
     if (!form.alamat) next.alamat = "Alamat wajib diisi";
     if (!form.telepon) next.telepon = "Telepon wajib diisi";
     setErrors(next);
@@ -89,7 +87,7 @@ export const VendorFormDialog = ({
       }
       setOpen(false);
       if (mode === "add") {
-        setForm({ name: "", categoryId: categories[0]?._id ?? "", contact: "", rating: 4.5, priceRange: "", alamat: "", telepon: "" });
+        setForm({ name: "", categoryId: categories[0]?._id ?? "", rating: 4.5, priceRange: "", alamat: "", telepon: "" });
       }
     } catch (err) {
       toast.error("Gagal menyimpan vendor ke server");
@@ -128,11 +126,7 @@ export const VendorFormDialog = ({
             </div>
           </div>
           {/*
-          <div className="space-y-1.5">
-            <Label>Kontak</Label>
-            <Input value={form.contact} onChange={(e) => setForm({ ...form, contact: e.target.value })} placeholder="0812-xxxx-xxxx" />
-            {errors.contact ? <div className="text-xs text-destructive">{errors.contact}</div> : null}
-          </div>
+          Field kontak dihapus permanen, hanya telepon yang digunakan
           */}
           <div className="space-y-1.5">
             <Label>Alamat</Label>

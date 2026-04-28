@@ -180,6 +180,10 @@ function BookingDetailDialog({
 
 const Bookings = () => {
   const bookings = useBookings();
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(10);
+  const totalPages = Math.ceil(bookings.length / perPage);
+  const pagedBookings = bookings.slice((page - 1) * perPage, page * perPage);
   const clients = useClients();
   const packages = usePackages();
   const vendors = useVendors();
@@ -211,7 +215,7 @@ const Bookings = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {bookings.map((b) => {
+              {pagedBookings.map((b) => {
                 const client = clients.find((c) => c.id === b.clientId);
                 const pkg = packages.find((p) => p.id === b.packageId);
                 const adatName = adat.find((a) => a.id === b.adatId)?.nama_adat || "—";
@@ -283,6 +287,30 @@ const Bookings = () => {
           </table>
         </div>
       </Card>
+      {/* Pagination Controls */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4">
+        <div className="flex items-center gap-2">
+          <span className="text-sm">Tampilkan</span>
+          <Select value={String(perPage)} onValueChange={v => { setPerPage(Number(v)); setPage(1); }}>
+            <SelectTrigger className="w-20"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="10">10</SelectItem>
+              <SelectItem value="20">20</SelectItem>
+              <SelectItem value="50">50</SelectItem>
+            </SelectContent>
+          </Select>
+          <span className="text-sm">per halaman</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage(page - 1)}>
+            &lt;
+          </Button>
+          <span className="text-sm">Halaman {page} dari {totalPages || 1}</span>
+          <Button variant="outline" size="sm" disabled={page === totalPages || totalPages === 0} onClick={() => setPage(page + 1)}>
+            &gt;
+          </Button>
+        </div>
+      </div>
     </>
   );
 };

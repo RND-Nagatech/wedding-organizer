@@ -32,8 +32,15 @@ const PaymentsReport = () => {
   const [to, setTo] = useState(defaultTo);
   const [status, setStatus] = useState("all");
   const [client, setClient] = useState("all");
+
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(10);
+  const totalPages = Math.ceil(rows.length / perPage);
+  const pagedList = rows.slice((page - 1) * perPage, page * perPage);
+
+  useEffect(() => { setPage(1); }, [perPage, from, to, status, client]);
 
   const load = async () => {
     try {
@@ -171,7 +178,7 @@ const PaymentsReport = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {rows.map((r, idx) => (
+              {pagedList.map((r, idx) => (
                 <TableRow key={idx}>
                   <TableCell className="font-medium">{String(r.kode_booking || "").toUpperCase()}</TableCell>
                   <TableCell>{r.kode_client || "—"}</TableCell>
@@ -183,7 +190,7 @@ const PaymentsReport = () => {
                   <TableCell>{r.status_pembayaran ? statusLabel(r.status_pembayaran) : "—"}</TableCell>
                 </TableRow>
               ))}
-              {rows.length === 0 ? (
+              {pagedList.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={8} className="text-center text-muted-foreground py-10">
                     Tidak ada data
@@ -194,6 +201,32 @@ const PaymentsReport = () => {
           </Table>
         </div>
       </Card>
+
+      {/* Pagination Controls */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 pt-0">
+        <div className="flex items-center gap-2">
+          <span className="text-sm">Tampilkan</span>
+          <select
+            className="border rounded px-2 py-1 text-sm"
+            value={perPage}
+            onChange={e => { setPerPage(Number(e.target.value)); setPage(1); }}
+          >
+            <option value={10}>10</option>
+            <option value={20}>20</option>
+            <option value={50}>50</option>
+          </select>
+          <span className="text-sm">per halaman</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage(page - 1)}>
+            &lt;
+          </Button>
+          <span className="text-sm">Halaman {page} dari {totalPages || 1}</span>
+          <Button variant="outline" size="sm" disabled={page === totalPages || totalPages === 0} onClick={() => setPage(page + 1)}>
+            &gt;
+          </Button>
+        </div>
+      </div>
     </>
   );
 };

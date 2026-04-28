@@ -145,10 +145,16 @@ function AdatFormDialog({
   );
 }
 
+
 const AdatConcepts = () => {
   const adat = useAdat();
   const [q, setQ] = useState("");
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(10);
+
   const filtered = adat.filter((a) => a.nama_adat.toLowerCase().includes(q.toLowerCase()));
+  const totalPages = Math.ceil(filtered.length / perPage);
+  const pagedList = filtered.slice((page - 1) * perPage, page * perPage);
 
   return (
     <>
@@ -168,7 +174,7 @@ const AdatConcepts = () => {
       />
 
       <div className="mb-4 max-w-sm">
-        <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari nama adat..." />
+        <Input value={q} onChange={(e) => { setQ(e.target.value); setPage(1); }} placeholder="Cari nama adat..." />
       </div>
 
       <Card className="border-border shadow-soft overflow-hidden">
@@ -183,7 +189,7 @@ const AdatConcepts = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.map((a) => (
+              {pagedList.map((a) => (
                 <TableRow key={a.id} className="hover:bg-muted/30 transition-smooth">
                   <TableCell className="font-medium">
                     <div>{a.nama_adat}</div>
@@ -224,7 +230,7 @@ const AdatConcepts = () => {
                   </TableCell>
                 </TableRow>
               ))}
-              {filtered.length === 0 ? (
+              {pagedList.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={4} className="text-center text-muted-foreground py-10">
                     Belum ada data.
@@ -235,6 +241,32 @@ const AdatConcepts = () => {
           </Table>
         </div>
       </Card>
+
+      {/* Pagination Controls */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4">
+        <div className="flex items-center gap-2">
+          <span className="text-sm">Tampilkan</span>
+          <select
+            className="border rounded px-2 py-1 text-sm"
+            value={perPage}
+            onChange={e => { setPerPage(Number(e.target.value)); setPage(1); }}
+          >
+            <option value={10}>10</option>
+            <option value={20}>20</option>
+            <option value={50}>50</option>
+          </select>
+          <span className="text-sm">per halaman</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage(page - 1)}>
+            &lt;
+          </Button>
+          <span className="text-sm">Halaman {page} dari {totalPages || 1}</span>
+          <Button variant="outline" size="sm" disabled={page === totalPages || totalPages === 0} onClick={() => setPage(page + 1)}>
+            &gt;
+          </Button>
+        </div>
+      </div>
     </>
   );
 };

@@ -21,8 +21,8 @@ router.post("/", async (req, res) => {
     if (!kategori_vendor_id) {
       return res.status(400).json({ pesan: "Kategori vendor wajib diisi" });
     }
-    if (!req.body?.kontak || !req.body?.alamat || !req.body?.telepon) {
-      return res.status(400).json({ pesan: "Lengkapi kontak, alamat, dan telepon" });
+    if (!req.body?.alamat || !req.body?.telepon) {
+      return res.status(400).json({ pesan: "Lengkapi alamat dan telepon" });
     }
 
     const category = await KatVendor.findById(kategori_vendor_id);
@@ -51,8 +51,8 @@ router.put("/:id", async (req, res) => {
       payload.kategori_vendor_kode = category.kode_kategori;
       payload.kategori_vendor_nama = category.nama_kategori;
     }
-    if (payload.kontak === "" || payload.alamat === "" || payload.telepon === "") {
-      return res.status(400).json({ pesan: "Kontak, alamat, dan telepon tidak boleh kosong" });
+    if (payload.alamat === "" || payload.telepon === "") {
+      return res.status(400).json({ pesan: "Alamat dan telepon tidak boleh kosong" });
     }
 
     const vendor = await TmVendor.findByIdAndUpdate(req.params.id, payload, { new: true, runValidators: true });

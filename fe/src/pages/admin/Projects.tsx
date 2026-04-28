@@ -21,8 +21,10 @@ export default function Projects() {
   const [dateTo, setDateTo] = useState("");
   const [reviewStatus, setReviewStatus] = useState<string>("all");
   const [eventStatus, setEventStatus] = useState<string>("all");
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(10);
 
-  const rows = useMemo(() => {
+  const filteredRows = useMemo(() => {
     return bookings
       .filter((b) => (b.eventStatus || "draft") !== "batal")
       .filter((b) => {
@@ -41,9 +43,16 @@ export default function Projects() {
       .sort((a, b) => String(a.eventDate || "").localeCompare(String(b.eventDate || "")));
   }, [bookings, packages, q, dateFrom, dateTo, reviewStatus, eventStatus]);
 
+  const totalPages = Math.ceil(filteredRows.length / perPage);
+  const pagedRows = filteredRows.slice((page - 1) * perPage, page * perPage);
+
+  // Reset page to 1 if filter changes
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useMemo(() => { setPage(1); }, [q, dateFrom, dateTo, reviewStatus, eventStatus, perPage]);
+
   return (
     <>
-      <PageHeader title="Project Management" subtitle={`${rows.length} project`} />
+      <PageHeader title="Project Management" subtitle={`${filteredRows.length} project`} />
 
       <Card className="border-border shadow-soft overflow-hidden">
         <div className="p-4 border-b border-border bg-muted/20">
@@ -102,7 +111,7 @@ export default function Projects() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {rows.map((b) => {
+              {pagedRows.map((b) => {
                 const pkg = packages.find((p) => p.id === b.packageId);
                 const pkgName = b.packageSnapshot?.name || pkg?.name || "-";
                 return (
@@ -123,7 +132,7 @@ export default function Projects() {
                   </TableRow>
                 );
               })}
-              {rows.length === 0 ? (
+              {pagedRows.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center text-muted-foreground py-10">
                     Belum ada project.
@@ -132,6 +141,31 @@ export default function Projects() {
               ) : null}
             </TableBody>
           </Table>
+        </div>
+
+        {/* Pagination Controls */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 pt-0">
+          <div className="flex items-center gap-2">
+            <span className="text-sm">Tampilkan</span>
+            <Select value={String(perPage)} onValueChange={v => { setPerPage(Number(v)); setPage(1); }}>
+              <SelectTrigger className="w-20"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="20">20</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+              </SelectContent>
+            </Select>
+            <span className="text-sm">per halaman</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage(page - 1)}>
+              &lt;
+            </Button>
+            <span className="text-sm">Halaman {page} dari {totalPages || 1}</span>
+            <Button variant="outline" size="sm" disabled={page === totalPages || totalPages === 0} onClick={() => setPage(page + 1)}>
+              &gt;
+            </Button>
+          </div>
         </div>
       </Card>
     </>
