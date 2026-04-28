@@ -153,8 +153,9 @@ function KeuanganFormDialog({
 const KeuanganPage = () => {
   const list = useKeuangan();
 
-  const [tglFrom, setTglFrom] = useState<string>("");
-  const [tglTo, setTglTo] = useState<string>("");
+  const today = new Date().toISOString().slice(0, 10);
+  const [tglFrom, setTglFrom] = useState<string>(today);
+  const [tglTo, setTglTo] = useState<string>(today);
   const [kategori, setKategori] = useState<string>("all");
   const [q, setQ] = useState("");
 
