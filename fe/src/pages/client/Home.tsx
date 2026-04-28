@@ -5,7 +5,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { formatDate, formatIDR } from "@/lib/mockData";
 import { Heart, Receipt, ListChecks, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
-import { useBookings, useChecklist, useClients, useInvoices, usePackages } from "@/lib/dataStore";
+import { useBookings, useChecklist, useClients, useInvoices, usePackages, usePayments, useTimelineEvent } from "@/lib/dataStore";
+import { useEffect, useState } from "react";
 
 const ClientHome = () => {
   const { user } = useAuth();
@@ -15,39 +16,91 @@ const ClientHome = () => {
   const packages = usePackages();
   const invoices = useInvoices();
   const checklist = useChecklist();
+  const payments = usePayments();
+  const timelineEvent = useTimelineEvent();
 
   const client = clients.find((c) => c.id === cId);
   const booking = bookings.find((b) => b.clientId === cId);
   const pkg = packages.find((p) => p.id === client?.packageId);
   const inv = invoices.find((i) => i.clientId === cId);
   const tasks = checklist.filter((t) => t.bookingId === booking?.id);
-  const doneTasks = tasks.filter((t) => t.done).length;
+  // Persiapan: pakai timelineEvent
+  const timelineTasks = timelineEvent.filter((t) => t.kode_booking === booking?.code || t.kode_booking === booking?.id);
+  const doneTimelineTasks = timelineTasks.filter((t) => t.status === "selesai").length;
+  // Pembayaran: pakai payments
+  const clientPayments = payments.filter((p) => p.clientCode === client?.code || p.clientName === client?.name);
+  const totalDue = clientPayments.reduce((sum, p) => sum + (p.totalDue || 0), 0);
+  const totalPaid = clientPayments.reduce((sum, p) => sum + (p.amountPaid || 0), 0);
+  const paymentPercent = totalDue > 0 ? Math.round((totalPaid / totalDue) * 100) : 0;
 
-  const today = new Date();
   const eventDateStr = booking?.eventDate || client?.weddingDate || new Date().toISOString().slice(0, 10);
   const eventDate = new Date(eventDateStr);
-  const daysToGo = Math.max(0, Math.ceil((eventDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)));
+
+  // Countdown state
+  const [countdown, setCountdown] = useState<{days: number, hours: number, minutes: number, seconds: number}>(() => {
+    const now = new Date();
+    const diff = Math.max(0, eventDate.getTime() - now.getTime());
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+    const minutes = Math.floor((diff / (1000 * 60)) % 60);
+    const seconds = Math.floor((diff / 1000) % 60);
+    return { days, hours, minutes, seconds };
+  });
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const now = new Date();
+      const diff = Math.max(0, eventDate.getTime() - now.getTime());
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+      const minutes = Math.floor((diff / (1000 * 60)) % 60);
+      const seconds = Math.floor((diff / 1000) % 60);
+      setCountdown({ days, hours, minutes, seconds });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [eventDateStr]);
 
   return (
     <>
       {/* Countdown hero */}
-      <Card className="p-8 lg:p-12 mb-8 border-border shadow-elegant bg-gradient-hero relative overflow-hidden">
+      <Card className="p-6 lg:p-12 mb-8 border-none shadow-none bg-gradient-hero relative overflow-hidden">
         <div className="absolute -top-20 -right-20 w-64 h-64 rounded-full bg-primary/10 blur-3xl" />
         <div className="absolute -bottom-20 -left-20 w-64 h-64 rounded-full bg-accent/20 blur-3xl" />
-        <div className="relative">
-          <div className="flex items-center gap-2 text-xs uppercase tracking-[0.25em] text-accent font-medium">
+        <div className="relative flex flex-col items-center text-center">
+          <div className="flex items-center gap-2 text-xs uppercase tracking-[0.25em] text-accent font-medium mb-2">
             <Heart className="w-3 h-3 fill-accent" /> Hari spesial Anda
           </div>
-          <h1 className="font-display text-4xl lg:text-6xl mt-3">
+          <h1 className="font-display text-4xl lg:text-6xl mt-1">
             {client?.name || "—"} <em className="text-primary">&</em> {client?.partner || "—"}
           </h1>
-          <div className="mt-4 text-muted-foreground">{eventDateStr ? formatDate(eventDateStr) : "—"}</div>
+          <div className="mt-2 text-muted-foreground text-base lg:text-lg">{eventDateStr ? formatDate(eventDateStr) : "—"}</div>
 
-          <div className="mt-8 flex items-end gap-4">
-            <div className="font-display text-7xl lg:text-8xl text-primary leading-none">{daysToGo}</div>
-            <div className="pb-3">
-              <div className="text-sm font-medium">hari lagi</div>
-              <div className="text-xs text-muted-foreground">menuju momen indah</div>
+          <div className="mt-8 flex flex-col items-center w-full">
+            <div className="flex flex-row items-end justify-center gap-8 w-full">
+              <div className="flex flex-col items-center">
+                <span className="font-display text-6xl lg:text-8xl text-primary leading-none">{countdown.days}</span>
+                <span className="text-base lg:text-xl font-medium mt-1 text-primary">hari</span>
+              </div>
+              <div className="flex flex-col items-center">
+                <span
+                  className="font-mono text-3xl lg:text-5xl tracking-widest rounded-xl px-5 py-2 shadow-md"
+                  style={{
+                    color: 'var(--primary)',
+                    background: 'rgba(255,255,255,0.35)',
+                    backdropFilter: 'blur(6px)',
+                    border: '1.5px solid var(--primary-100, #e9d8fd)',
+                  }}
+                >
+                  {String(countdown.hours).padStart(2, "0")}:{String(countdown.minutes).padStart(2, "0")}:{String(countdown.seconds).padStart(2, "0")}
+                </span>
+                <span className="text-xs lg:text-sm text-primary/60 mt-1 tracking-wide">jam : menit : detik</span>
+              </div>
+            </div>
+            <div
+              className="mt-3 text-lg lg:text-2xl font-serif italic text-primary/70 tracking-wide font-semibold"
+              style={{ letterSpacing: '0.04em' }}
+            >
+              menuju momen indah
             </div>
           </div>
         </div>
@@ -77,8 +130,8 @@ const ClientHome = () => {
               <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:translate-x-1 transition-smooth" />
             </div>
             <div className="text-xs uppercase tracking-wider text-muted-foreground">Persiapan</div>
-            <div className="font-display text-2xl mt-1">{doneTasks} / {tasks.length}</div>
-            <div className="text-sm text-muted-foreground mt-1">checklist selesai</div>
+            <div className="font-display text-2xl mt-1">{doneTimelineTasks} / {timelineTasks.length}</div>
+            <div className="text-sm text-muted-foreground mt-1">tugas selesai</div>
           </Card>
         </Link>
 
@@ -91,7 +144,7 @@ const ClientHome = () => {
               <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:translate-x-1 transition-smooth" />
             </div>
             <div className="text-xs uppercase tracking-wider text-muted-foreground">Pembayaran</div>
-            <div className="font-display text-2xl mt-1">{inv ? `${Math.round((inv.paid / inv.amount) * 100)}%` : "—"}</div>
+            <div className="font-display text-2xl mt-1">{totalDue > 0 ? `${paymentPercent}%` : "—"}</div>
             <div className="text-sm text-muted-foreground mt-1">terbayar dari total</div>
           </Card>
         </Link>

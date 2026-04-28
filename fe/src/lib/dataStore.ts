@@ -397,10 +397,6 @@ export const store = {
       harga: p.price,
       fitur: p.features,
       vendor_ids: p.vendorIds || [],
-      kategori_vendors: (p.vendorByCategory || []).map((row) => ({
-        kategori_vendor_id: row.kategoriVendorId,
-        vendor_ids: row.vendorIds,
-      })),
       populer: p.popular || false,
     });
     setState((s) => ({ ...s, packages: [
@@ -411,10 +407,6 @@ export const store = {
         price: paket.harga,
         features: paket.fitur,
         vendorIds: paket.vendor_ids || [],
-        vendorByCategory: (paket.kategori_vendors || []).map((row: any) => ({
-          kategoriVendorId: row.kategori_vendor_id?._id || row.kategori_vendor_id,
-          vendorIds: row.vendor_ids || [],
-        })),
         popular: paket.populer,
       },
       ...s.packages,
@@ -429,12 +421,6 @@ export const store = {
         harga: p.price,
         fitur: p.features,
         vendor_ids: p.vendorIds,
-        kategori_vendors: p.vendorByCategory
-          ? p.vendorByCategory.map((row) => ({
-              kategori_vendor_id: row.kategoriVendorId,
-              vendor_ids: row.vendorIds,
-            }))
-          : undefined,
         populer: p.popular,
       })
     );
@@ -449,10 +435,6 @@ export const store = {
               price: paket.harga,
               features: paket.fitur,
               vendorIds: paket.vendor_ids || [],
-              vendorByCategory: (paket.kategori_vendors || []).map((row: any) => ({
-                kategoriVendorId: row.kategori_vendor_id?._id || row.kategori_vendor_id,
-                vendorIds: row.vendor_ids || [],
-              })),
               popular: paket.populer,
             }
           : x
@@ -472,22 +454,6 @@ export const store = {
       tamu: b.guests,
       status: b.status,
       vendor_dipilih_ids: b.vendorSelectedIds || [],
-      // Tahap 5 (preferred) fields
-      client_id: b.clientId,
-      paket_id: b.packageId,
-      lokasi_acara: b.venue,
-      status_event: b.eventStatus,
-      status_review: b.reviewStatus,
-      adat_id: b.adatId,
-      pic: b.pic,
-      catatan: b.note,
-      preferensi_katalog: b.preferensiKatalog
-        ? {
-            baju_id: b.preferensiKatalog.bajuId,
-            dekorasi_id: b.preferensiKatalog.dekorasiId,
-            makeup_id: b.preferensiKatalog.makeupId,
-          }
-        : undefined,
     });
     setState((s) => ({ ...s, bookings: [
       {
@@ -503,23 +469,8 @@ export const store = {
         adatId: booking.adat_id,
         pic: booking.pic,
         eventStatus: booking.status_event,
-        reviewStatus: booking.status_review,
         note: booking.catatan,
         vendorSelectedIds: booking.vendor_dipilih_ids || [],
-        preferensiKatalog: booking.preferensi_katalog
-          ? {
-              bajuId: booking.preferensi_katalog.baju_id,
-              dekorasiId: booking.preferensi_katalog.dekorasi_id,
-              makeupId: booking.preferensi_katalog.makeup_id,
-            }
-          : undefined,
-        preferensiKatalogSnapshot: booking.preferensi_katalog
-          ? {
-              baju: booking.preferensi_katalog.baju_snapshot,
-              dekorasi: booking.preferensi_katalog.dekorasi_snapshot,
-              makeup: booking.preferensi_katalog.makeup_snapshot,
-            }
-          : undefined,
         packageSnapshot: booking.paket_snapshot
           ? {
               name: booking.paket_snapshot.nama_paket,
@@ -622,27 +573,12 @@ export const store = {
           adatId: booking.adat_id?._id || booking.adat_id,
           pic: booking.pic,
           eventStatus: booking.status_event,
-          reviewStatus: booking.status_review,
           note: booking.catatan,
           vendorSelectedIds: booking.vendor_dipilih_ids || [],
-            preferensiKatalog: booking.preferensi_katalog
-              ? {
-                  bajuId: booking.preferensi_katalog.baju_id,
-                  dekorasiId: booking.preferensi_katalog.dekorasi_id,
-                  makeupId: booking.preferensi_katalog.makeup_id,
-                }
-              : undefined,
-            preferensiKatalogSnapshot: booking.preferensi_katalog
-              ? {
-                  baju: booking.preferensi_katalog.baju_snapshot,
-                  dekorasi: booking.preferensi_katalog.dekorasi_snapshot,
-                  makeup: booking.preferensi_katalog.makeup_snapshot,
-                }
-              : undefined,
-            packageSnapshot: booking.paket_snapshot
-              ? {
-                  name: booking.paket_snapshot.nama_paket,
-                  tagline: booking.paket_snapshot.tagline,
+          packageSnapshot: booking.paket_snapshot
+            ? {
+                name: booking.paket_snapshot.nama_paket,
+                tagline: booking.paket_snapshot.tagline,
                 price: booking.paket_snapshot.harga,
                 features: booking.paket_snapshot.fitur,
                 vendorIds: booking.paket_snapshot.vendor_ids,
@@ -665,7 +601,6 @@ export const store = {
       venue: string;
       pic?: string;
       eventStatus?: "draft" | "aktif" | "selesai" | "batal";
-      reviewStatus?: "menunggu_review" | "approved" | "rejected";
       note?: string;
       vendorSelectedIds: string[];
     }>
@@ -680,7 +615,6 @@ export const store = {
         lokasi_acara: payload.venue,
         pic: payload.pic,
         status_event: payload.eventStatus,
-        status_review: payload.reviewStatus,
         catatan: payload.note,
         vendor_dipilih_ids: payload.vendorSelectedIds,
       })
@@ -703,23 +637,8 @@ export const store = {
               adatId: booking.adat_id?._id || booking.adat_id,
               pic: booking.pic,
               eventStatus: booking.status_event,
-              reviewStatus: booking.status_review,
               note: booking.catatan,
               vendorSelectedIds: booking.vendor_dipilih_ids || [],
-              preferensiKatalog: booking.preferensi_katalog
-                ? {
-                    bajuId: booking.preferensi_katalog.baju_id,
-                    dekorasiId: booking.preferensi_katalog.dekorasi_id,
-                    makeupId: booking.preferensi_katalog.makeup_id,
-                  }
-                : undefined,
-              preferensiKatalogSnapshot: booking.preferensi_katalog
-                ? {
-                    baju: booking.preferensi_katalog.baju_snapshot,
-                    dekorasi: booking.preferensi_katalog.dekorasi_snapshot,
-                    makeup: booking.preferensi_katalog.makeup_snapshot,
-                  }
-                : undefined,
               packageSnapshot: booking.paket_snapshot
                 ? {
                     name: booking.paket_snapshot.nama_paket,
@@ -1156,10 +1075,6 @@ export const usePackages = () => {
             price: p.harga,
             features: p.fitur,
             vendorIds: p.vendor_ids || [],
-            vendorByCategory: (p.kategori_vendors || []).map((row: any) => ({
-              kategoriVendorId: row.kategori_vendor_id?._id || row.kategori_vendor_id,
-              vendorIds: row.vendor_ids || [],
-            })),
             popular: p.populer,
           })),
         }));
@@ -1190,23 +1105,8 @@ export const useBookings = () => {
             adatId: b.adat_id?._id || b.adat_id,
             pic: b.pic,
             eventStatus: b.status_event,
-            reviewStatus: b.status_review,
             note: b.catatan,
             vendorSelectedIds: b.vendor_dipilih_ids || [],
-            preferensiKatalog: b.preferensi_katalog
-              ? {
-                  bajuId: b.preferensi_katalog.baju_id,
-                  dekorasiId: b.preferensi_katalog.dekorasi_id,
-                  makeupId: b.preferensi_katalog.makeup_id,
-                }
-              : undefined,
-            preferensiKatalogSnapshot: b.preferensi_katalog
-              ? {
-                  baju: b.preferensi_katalog.baju_snapshot,
-                  dekorasi: b.preferensi_katalog.dekorasi_snapshot,
-                  makeup: b.preferensi_katalog.makeup_snapshot,
-                }
-              : undefined,
             packageSnapshot: b.paket_snapshot
               ? {
                   name: b.paket_snapshot.nama_paket,

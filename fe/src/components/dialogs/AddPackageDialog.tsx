@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogT
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus } from "lucide-react";
+import { Plus, Pencil, Trash2 } from "lucide-react";
 import { store, useVendors } from "@/lib/dataStore";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -31,6 +31,10 @@ export const PackageFormDialog = ({
   const [price, setPrice] = useState(0);
   const [features, setFeatures] = useState("");
   const [vendorByCategory, setVendorByCategory] = useState<Array<{ kategoriVendorId: string; vendorIds: string[] }>>([]);
+  // State untuk input sementara sebelum ditambah ke list
+  const [inputKategori, setInputKategori] = useState<string>("");
+  const [inputVendorIds, setInputVendorIds] = useState<string[]>([]);
+  const [editIdx, setEditIdx] = useState<number | null>(null); // index data yang sedang diedit
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -47,17 +51,10 @@ export const PackageFormDialog = ({
         }))
       );
     } else {
-      const selected = new Set((initial?.vendorIds || []).map(String));
-      const grouped = new Map<string, string[]>();
-      vendors.forEach((v) => {
-        if (!selected.has(v.id)) return;
-        const key = String(v.categoryId || "");
-        if (!key) return;
-        grouped.set(key, [...(grouped.get(key) || []), v.id]);
-      });
-      const rows = Array.from(grouped.entries()).map(([kategoriVendorId, vendorIds]) => ({ kategoriVendorId, vendorIds }));
-      setVendorByCategory(rows);
+      setVendorByCategory([]);
     }
+    setInputKategori("");
+    setInputVendorIds([]);
     setErrors({});
   }, [open, initial]);
 
@@ -132,115 +129,143 @@ export const PackageFormDialog = ({
             <Textarea rows={5} value={features} onChange={(e) => setFeatures(e.target.value)} placeholder="Hingga 200 tamu&#10;Dekorasi premium&#10;Fotografi 8 jam" />
           </div>
           <div className="space-y-2">
-            <div className="flex items-center justify-between gap-2 flex-wrap">
-              <Label>Vendor dalam Paket (berdasarkan kategori)</Label>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setVendorByCategory((rows) => [...rows, { kategoriVendorId: "", vendorIds: [] }])}
-              >
-                + Tambah Kategori
-              </Button>
-            </div>
-
-            {vendorByCategory.length === 0 ? (
-              <div className="text-sm text-muted-foreground">Tambahkan kategori vendor untuk memilih vendor.</div>
-            ) : (
-              <div className="space-y-3">
-                {vendorByCategory.map((row, idx) => {
-                  const selectedCategoryId = row.kategoriVendorId;
-                  const categoryName =
-                    kategoriOptions.find((x) => String(x._id) === String(selectedCategoryId))?.nama_kategori || "—";
-                  const vendorsInCategory = vendors.filter((v) => String(v.categoryId || "") === String(selectedCategoryId));
-                  return (
-                    <Card key={`${idx}-${selectedCategoryId || "x"}`} className="p-4 border-border shadow-soft space-y-3">
-                      <div className="flex items-center justify-between gap-3 flex-wrap">
-                        <div className="min-w-[240px] flex-1 space-y-1.5">
-                          <Label>Kategori Vendor</Label>
-                          <Select
-                            value={selectedCategoryId || ""}
-                            onValueChange={(v) => {
-                              setVendorByCategory((rows) =>
-                                rows.map((r, i) =>
-                                  i !== idx
-                                    ? r
-                                    : {
-                                        kategoriVendorId: v,
-                                        vendorIds: [],
-                                      }
-                                )
-                              );
-                            }}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Pilih kategori vendor" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {kategoriOptions.map((k) => (
-                                <SelectItem key={k._id} value={String(k._id)}>
-                                  {k.nama_kategori}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <Button
-                          type="button"
-                          variant="destructive"
-                          onClick={() => setVendorByCategory((rows) => rows.filter((_, i) => i !== idx))}
-                        >
-                          Hapus Kategori
-                        </Button>
+            <Label>Tambah Kategori & Vendor</Label>
+            <div className="border rounded-lg p-4 bg-background space-y-4">
+              <div className="flex flex-col gap-2">
+                <div>
+                  <Label className="mb-1 block">Kategori Vendor</Label>
+                  <Select
+                    value={inputKategori}
+                    onValueChange={(v) => {
+                      setInputKategori(v);
+                      setInputVendorIds([]);
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Pilih kategori vendor" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {kategoriOptions.map((k) => (
+                        <SelectItem key={k._id} value={String(k._id)}>
+                          {k.nama_kategori}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="mb-1 block">Vendor</Label>
+                  {inputKategori ? (
+                    <div className="border rounded-md p-2 max-h-48 overflow-auto bg-muted/30">
+                      <label className="flex items-center gap-2 text-sm font-medium mb-1">
+                        <Checkbox
+                          checked={inputVendorIds.length === vendors.filter((v) => String(v.categoryId) === inputKategori).length}
+                          indeterminate={inputVendorIds.length > 0 && inputVendorIds.length < vendors.filter((v) => String(v.categoryId) === inputKategori).length}
+                          onCheckedChange={(val) => {
+                            const allVendors = vendors.filter((v) => String(v.categoryId) === inputKategori).map((v) => v.id);
+                            setInputVendorIds(val ? allVendors : []);
+                          }}
+                        />
+                        Semua Vendor
+                      </label>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-2">
+                        {vendors.filter((v) => String(v.categoryId) === inputKategori).map((v) => (
+                          <label key={v.id} className="flex items-center gap-2 text-sm">
+                            <Checkbox
+                              checked={inputVendorIds.includes(v.id)}
+                              onCheckedChange={(val) => {
+                                setInputVendorIds((prev) =>
+                                  val ? Array.from(new Set([...prev, v.id])) : prev.filter((x) => x !== v.id)
+                                );
+                              }}
+                            />
+                            <span>{v.name}</span>
+                          </label>
+                        ))}
                       </div>
-
-                      <div className="text-xs text-muted-foreground">
-                        {selectedCategoryId ? `Kategori: ${categoryName}` : "Pilih kategori dulu untuk menampilkan vendor."}
-                      </div>
-
-                      <div className="max-h-48 overflow-auto rounded-md border border-border p-3 space-y-2">
-                        {!selectedCategoryId ? (
-                          <div className="text-sm text-muted-foreground">Pilih kategori vendor.</div>
-                        ) : vendorsInCategory.length === 0 ? (
-                          <div className="text-sm text-muted-foreground">Belum ada vendor pada kategori ini.</div>
-                        ) : (
-                          vendorsInCategory.map((v) => {
-                            const checked = row.vendorIds.includes(v.id);
-                            return (
-                              <label key={v.id} className="flex items-center gap-3 text-sm">
-                                <Checkbox
-                                  checked={checked}
-                                  onCheckedChange={(val) => {
-                                    const next = Boolean(val);
-                                    setVendorByCategory((rows) =>
-                                      rows.map((r, i) =>
-                                        i !== idx
-                                          ? r
-                                          : {
-                                              ...r,
-                                              vendorIds: next
-                                                ? Array.from(new Set([...r.vendorIds, v.id]))
-                                                : r.vendorIds.filter((x) => x !== v.id),
-                                            }
-                                      )
-                                    );
-                                  }}
-                                />
-                                <span className="flex-1 min-w-0">
-                                  <span className="font-medium">{v.name}</span>{" "}
-                                  <span className="text-muted-foreground">· {v.category}</span>
-                                </span>
-                              </label>
-                            );
-                          })
-                        )}
-                      </div>
-                      <div className="text-xs text-muted-foreground">{row.vendorIds.length} vendor dipilih pada kategori ini</div>
-                    </Card>
-                  );
-                })}
+                    </div>
+                  ) : (
+                    <div className="text-xs text-muted-foreground">Pilih kategori terlebih dahulu</div>
+                  )}
+                </div>
+                <Button
+                  type="button"
+                  variant="default"
+                  className="w-full mt-2"
+                  disabled={!inputKategori || inputVendorIds.length === 0 || (editIdx === null && vendorByCategory.some((r) => r.kategoriVendorId === inputKategori))}
+                  onClick={() => {
+                    if (editIdx !== null) {
+                      setVendorByCategory((rows) => rows.map((r, i) => i === editIdx ? { kategoriVendorId: inputKategori, vendorIds: inputVendorIds } : r));
+                    } else {
+                      setVendorByCategory((rows) => [...rows, { kategoriVendorId: inputKategori, vendorIds: inputVendorIds }]);
+                    }
+                    setInputKategori("");
+                    setInputVendorIds([]);
+                    setEditIdx(null);
+                  }}
+                >
+                  {editIdx !== null ? "Simpan Perubahan" : "Tambah"}
+                </Button>
               </div>
-            )}
+            </div>
+            <div className="mt-4">
+              <Label>List Kategori & Vendor yang Ditambahkan</Label>
+              {vendorByCategory.length === 0 ? (
+                <div className="text-sm text-muted-foreground">Belum ada kategori/vendor yang ditambahkan.</div>
+              ) : (
+                <div className="space-y-3">
+                  {vendorByCategory.map((row, idx) => {
+                    const selectedCategoryId = row.kategoriVendorId;
+                    const categoryName = kategoriOptions.find((x) => String(x._id) === String(selectedCategoryId))?.nama_kategori || "—";
+                    const vendorsInCategory = vendors.filter((v) => row.vendorIds.includes(v.id));
+                    return (
+                      <Card key={`${idx}-${selectedCategoryId || "x"}`} className="p-3 relative">
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <div className="font-medium mb-1">{categoryName}</div>
+                            <div className="flex flex-wrap gap-1 text-xs text-muted-foreground">
+                              {vendorsInCategory.map((v) => (
+                                <span key={v.id} className="bg-muted px-2 py-0.5 rounded">{v.name}</span>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              title="Edit"
+                              className="text-primary hover:text-primary-foreground p-1 rounded"
+                              onClick={() => {
+                                setInputKategori(row.kategoriVendorId);
+                                setInputVendorIds(row.vendorIds);
+                                setEditIdx(idx);
+                              }}
+                            >
+                              <Pencil size={18} />
+                            </button>
+                            <button
+                              type="button"
+                              title="Hapus"
+                              className="text-destructive hover:text-destructive-foreground p-1 rounded"
+                              onClick={() => {
+                                setVendorByCategory((rows) => rows.filter((_, i) => i !== idx));
+                                // Jika sedang edit data ini, reset input
+                                if (editIdx === idx) {
+                                  setInputKategori("");
+                                  setInputVendorIds([]);
+                                  setEditIdx(null);
+                                }
+                              }}
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                          </div>
+                        </div>
+                      </Card>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
             {errors.vendorIds ? <div className="text-xs text-destructive">{errors.vendorIds}</div> : null}
             <div className="text-xs text-muted-foreground">{vendorUnionIds.length} vendor dipilih (total)</div>
           </div>
