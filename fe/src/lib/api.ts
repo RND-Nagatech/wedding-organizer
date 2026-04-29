@@ -526,6 +526,50 @@ export async function ambilVendorOptionsByKategori(params: { package_id: string;
   return res.json();
 }
 
+// WhatsApp connection & log
+export async function waStatus() {
+  const res = await fetch(`${API_BASE}/wa/status`);
+  if (!res.ok) throw new Error("Gagal mengambil status WhatsApp");
+  return res.json();
+}
+
+export async function waConnect() {
+  const res = await fetch(`${API_BASE}/wa/connect`, { method: "POST" });
+  if (!res.ok) throw new Error("Gagal connect WhatsApp");
+  return res.json();
+}
+
+export async function waReconnect() {
+  const res = await fetch(`${API_BASE}/wa/reconnect`, { method: "POST" });
+  if (!res.ok) throw new Error("Gagal reconnect WhatsApp");
+  return res.json();
+}
+
+export async function waLogout() {
+  const res = await fetch(`${API_BASE}/wa/logout`, { method: "POST" });
+  if (!res.ok) throw new Error("Gagal logout WhatsApp");
+  return res.json();
+}
+
+export async function waQr() {
+  const res = await fetch(`${API_BASE}/wa/qr`);
+  if (!res.ok) throw new Error("Gagal mengambil QR WhatsApp");
+  return res.json();
+}
+
+export async function ambilWaLog(params?: { status_kirim?: string; jenis_notifikasi?: string; kode_booking?: string; kode_client?: string }) {
+  const qs = params ? `?${new URLSearchParams(params as any).toString()}` : "";
+  const res = await fetch(`${API_BASE}/tt_wa_log${qs}`);
+  if (!res.ok) throw new Error("Gagal mengambil WhatsApp log");
+  return res.json();
+}
+
+export async function resendWaLog(id: string) {
+  const res = await fetch(`${API_BASE}/tt_wa_log/${id}/resend`, { method: "POST" });
+  if (!res.ok) throw new Error("Gagal resend WhatsApp");
+  return res.json();
+}
+
 // Tahap 12: Keuangan (tt_keuangan)
 export async function ambilKeuangan(params?: { tgl_from?: string; tgl_to?: string; kategori?: string }) {
   const qs = params ? `?${new URLSearchParams(params as any).toString()}` : "";

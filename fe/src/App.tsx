@@ -37,6 +37,8 @@ import CatalogMakeup from "./pages/admin/CatalogMakeup";
 import Addons from "./pages/admin/Addons";
 import ManageUsers from "./pages/admin/ManageUsers";
 import ProfileSettings from "./pages/admin/ProfileSettings";
+import WhatsAppSettings from "./pages/admin/WhatsAppSettings";
+import WhatsAppLog from "./pages/admin/WhatsAppLog";
 import ClientReferencesAdmin from "./pages/admin/ClientReferences";
 import ClientWishlistAdmin from "./pages/admin/ClientWishlist";
 import ChecklistBarang from "./pages/admin/ChecklistBarang";
@@ -106,8 +108,10 @@ const App = () => (
                       <Route path="reports" element={<RequirePermission permission="reports"><ReportsHome /></RequirePermission>} />
                       <Route path="reports/events" element={<RequirePermission permission="reports"><EventReport /></RequirePermission>} />
                       <Route path="reports/payments" element={<RequirePermission permission="reports"><PaymentsReport /></RequirePermission>} />
-                      <Route path="reports/keuangan-detail" element={<RequirePermission permission="reports"><KeuanganDetailReport /></RequirePermission>} />
-                      <Route path="reports/keuangan-rekap" element={<RequirePermission permission="reports"><KeuanganRekapReport /></RequirePermission>} />
+                        <Route path="reports/keuangan-detail" element={<RequirePermission permission="reports"><KeuanganDetailReport /></RequirePermission>} />
+                        <Route path="reports/keuangan-rekap" element={<RequirePermission permission="reports"><KeuanganRekapReport /></RequirePermission>} />
+                        <Route path="whatsapp" element={<RequirePermission permission="settings"><WhatsAppSettings /></RequirePermission>} />
+                        <Route path="whatsapp/log" element={<RequirePermission permission="settings"><WhatsAppLog /></RequirePermission>} />
                         <Route path="settings" element={<RequirePermission permission="settings"><Settings /></RequirePermission>} />
                         <Route path="settings/users" element={<RequirePermission permission="settings"><ManageUsers /></RequirePermission>} />
                         <Route path="settings/profile" element={<RequirePermission permission="settings"><ProfileSettings /></RequirePermission>} />

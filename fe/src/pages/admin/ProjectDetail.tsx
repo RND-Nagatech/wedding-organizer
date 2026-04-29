@@ -624,7 +624,7 @@ export default function ProjectDetail() {
                 <TableBody>
                   {taskRows.map((t) => (
                     <TableRow key={t.id}>
-                      <TableCell>{formatDate(t.deadline)}</TableCell>
+                      <TableCell>{t.deadline && !isNaN(Date.parse(t.deadline)) ? formatDate(t.deadline) : "-"}</TableCell>
                       <TableCell className="font-medium">{t.nama_tugas}</TableCell>
                       <TableCell>{t.kategori_tugas || "—"}</TableCell>
                       <TableCell>{t.pic || "—"}</TableCell>

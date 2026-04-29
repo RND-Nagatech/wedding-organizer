@@ -11,6 +11,7 @@ import TtTimelineClient from "../models/tt_timeline_client.js";
 import TtTimelineEvent from "../models/tt_timeline_event.js";
 import { generateDailyCode } from "../utils/code.js";
 import TmAddon from "../models/tm_addon.js";
+import { notifyBookingStatus } from "../services/notifications.js";
 
 const router = express.Router();
 
@@ -746,6 +747,16 @@ router.put("/:id", async (req, res) => {
     }
 
     res.json(booking);
+
+    // fire notification after response (best effort)
+    try {
+      const nextStatus = String(booking.status_booking || "");
+      if (prevStatusBooking !== nextStatus && ["approved", "rejected", "ongoing", "completed", "cancelled"].includes(nextStatus)) {
+        await notifyBookingStatus({ booking, status_booking: nextStatus });
+      }
+    } catch {
+      // ignore
+    }
   } catch (err) {
     res.status(400).json({ pesan: "Gagal mengedit booking", error: err.message });
   }

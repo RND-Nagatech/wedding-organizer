@@ -5,6 +5,7 @@ import TmClient from "../models/tm_client.js";
 import TmPackage from "../models/tm_package.js";
 import TtKeuangan from "../models/tt_keuangan.js";
 import { generateDailyCode } from "../utils/code.js";
+import { notifyPaymentCreated } from "../services/notifications.js";
 
 const router = express.Router();
 
@@ -127,7 +128,15 @@ router.post("/", async (req, res) => {
       ref_id: String(payment._id),
     });
 
-    res.status(201).json(payment);
+    // WA notification: create log + (maybe) send WA. Return log id for easier debugging.
+    let waLog = null;
+    try {
+      waLog = await notifyPaymentCreated({ payment });
+    } catch (err) {
+      // ignore (payment still success)
+    }
+
+    res.status(201).json({ ...payment.toObject(), wa_log_id: waLog?._id });
   } catch (err) {
     res.status(400).json({ pesan: "Gagal menambah pembayaran", error: err.message });
   }
@@ -189,7 +198,11 @@ router.put("/:id", async (req, res) => {
       { upsert: true, new: true }
     );
 
-    res.json(payment);
+    let waLog = null;
+    try {
+      waLog = await notifyPaymentCreated({ payment });
+    } catch (err) {}
+    res.json({ ...payment.toObject(), wa_log_id: waLog?._id });
   } catch (err) {
     res.status(400).json({ pesan: "Gagal mengedit pembayaran", error: err.message });
   }

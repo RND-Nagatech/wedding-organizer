@@ -1,7 +1,7 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Users, Store, Package, CalendarDays,
-  ListChecks, Receipt, BarChart3, LogOut, Heart, Menu, X, Settings, ChevronRight, ChevronDown
+  ListChecks, Receipt, BarChart3, LogOut, Heart, Menu, X, Settings, ChevronRight, ChevronDown, MessageCircle
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSystemProfile } from "@/contexts/SystemProfileContext";
@@ -79,6 +79,8 @@ const adminNav: NavItem[] = [
     submenu: [
       { to: "/admin/settings/users", label: "Manajemen User", icon: Users },
       { to: "/admin/settings/profile", label: "Profil Bisnis", icon: Heart },
+      { to: "/admin/whatsapp", label: "WhatsApp Connection", icon: MessageCircle },
+      { to: "/admin/whatsapp/log", label: "WhatsApp Log", icon: BarChart3 },
     ]
   },
 ];
