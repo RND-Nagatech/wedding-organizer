@@ -50,6 +50,19 @@ export const PackageFormDialog = ({
           vendorIds: (row.vendorIds || []).map(String),
         }))
       );
+    } else if (initial?.vendorIds && initial.vendorIds.length > 0) {
+      // Fallback: mapping vendorIds ke vendorByCategory berdasarkan kategori vendor asli
+      const vendorMap: Record<string, string[]> = {};
+      vendors.forEach((v) => {
+        if (initial.vendorIds.includes(v.id)) {
+          const catId = String(v.categoryId || "uncategorized");
+          if (!vendorMap[catId]) vendorMap[catId] = [];
+          vendorMap[catId].push(v.id);
+        }
+      });
+      setVendorByCategory(
+        Object.entries(vendorMap).map(([kategoriVendorId, vendorIds]) => ({ kategoriVendorId, vendorIds }))
+      );
     } else {
       setVendorByCategory([]);
     }

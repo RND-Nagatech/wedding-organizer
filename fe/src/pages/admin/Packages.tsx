@@ -2,11 +2,13 @@ import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { formatIDR } from "@/lib/mockData";
-import { store, usePackages } from "@/lib/dataStore";
-import { Check, Sparkles, Trash2, Pencil } from "lucide-react";
+import { store, usePackages, useVendors } from "@/lib/dataStore";
+import { Check, Sparkles, Trash2, Pencil, Info } from "lucide-react";
 import { AddPackageDialog, PackageFormDialog } from "@/components/dialogs/AddPackageDialog";
 import { ConfirmActionDialog } from "@/components/dialogs/ConfirmActionDialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { useState } from "react";
 
 const Packages = ({
   adminMode = true,
@@ -16,6 +18,16 @@ const Packages = ({
   onPickPackage?: (packageId: string) => void;
 }) => {
   const packages = usePackages();
+  const vendors = useVendors ? useVendors() : [];
+  const [detailId, setDetailId] = useState<string | null>(null);
+
+  const getVendorNames = (ids?: string[]) => {
+    if (!ids || !vendors.length) return [];
+    return vendors.filter((v) => ids.includes(v.id)).map((v) => v.name);
+  };
+
+  const selected = detailId ? packages.find((p) => p.id === detailId) : null;
+
   return (
     <>
       <PageHeader
@@ -44,21 +56,28 @@ const Packages = ({
             </div>
             <div className="text-xs text-muted-foreground">mulai dari</div>
 
+            {/* Fasilitas hanya 3-5 item awal */}
             <ul className="mt-6 space-y-2.5">
-              {p.features.map((f) => (
+              {p.features.slice(0, 5).map((f) => (
                 <li key={f} className="flex items-start gap-2.5 text-sm">
                   <Check className="w-4 h-4 text-primary mt-0.5 shrink-0" />
                   <span>{f}</span>
                 </li>
               ))}
+              {p.features.length > 5 && (
+                <li className="text-xs text-muted-foreground">+{p.features.length - 5} fasilitas lainnya</li>
+              )}
             </ul>
 
             <div className="mt-4 text-xs text-muted-foreground">
               Vendor paket: {(p.vendorIds || []).length}
             </div>
 
-            {adminMode ? (
-              <div className="mt-6 flex gap-2">
+            <div className="mt-6 flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={() => setDetailId(p.id)}>
+                <Info className="w-4 h-4 mr-1.5" /> Lihat Detail
+              </Button>
+              {adminMode && (
                 <PackageFormDialog
                   mode="edit"
                   initial={p}
@@ -68,6 +87,8 @@ const Packages = ({
                     </Button>
                   }
                 />
+              )}
+              {adminMode && (
                 <ConfirmActionDialog
                   title="Hapus paket?"
                   description={`Paket "${p.name}" akan dihapus.`}
@@ -86,19 +107,59 @@ const Packages = ({
                     </Button>
                   }
                 />
-              </div>
-            ) : (
-              <Button
-                className={`mt-6 w-full ${p.popular ? "bg-primary hover:bg-primary/90" : ""}`}
-                variant={p.popular ? "default" : "outline"}
-                onClick={() => onPickPackage?.(p.id)}
-              >
-                Pilih Paket Ini
-              </Button>
-            )}
+              )}
+              {!adminMode && (
+                <Button
+                  className={`w-full ${p.popular ? "bg-primary hover:bg-primary/90" : ""}`}
+                  variant={p.popular ? "default" : "outline"}
+                  onClick={() => onPickPackage?.(p.id)}
+                >
+                  Pilih Paket Ini
+                </Button>
+              )}
+            </div>
           </Card>
         ))}
       </div>
+
+      {/* Modal Detail Paket */}
+      <Dialog open={!!detailId} onOpenChange={() => setDetailId(null)}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="font-display text-2xl">{selected?.name}</DialogTitle>
+          </DialogHeader>
+          {selected && (
+            <div className="space-y-4">
+              <div className="text-lg font-medium text-primary">{formatIDR(selected.price)}</div>
+              <div className="text-sm text-muted-foreground">{selected.tagline}</div>
+              <div>
+                <div className="font-semibold mb-1">Fasilitas Lengkap</div>
+                <ul className="list-disc pl-5 space-y-1">
+                  {selected.features.map((f) => (
+                    <li key={f}>{f}</li>
+                  ))}
+                </ul>
+              </div>
+              <div>
+                <div className="font-semibold mb-1">Kategori Vendor</div>
+                <div className="text-sm">
+                  {(selected.vendorIds && selected.vendorIds.length > 0)
+                    ? getVendorNames(selected.vendorIds).join(", ")
+                    : "-"}
+                </div>
+              </div>
+              <div>
+                <div className="font-semibold mb-1">Vendor Rekomendasi</div>
+                <div className="text-sm">
+                  {(selected.vendorIds && selected.vendorIds.length > 0)
+                    ? getVendorNames(selected.vendorIds).join(", ")
+                    : "-"}
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </>
   );
 };
