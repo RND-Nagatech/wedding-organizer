@@ -14,6 +14,7 @@ import { Pencil } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ambilVendorBooking, updateVendorBooking } from "@/lib/api";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 
 function BookingDetailDialog({
   kodeBooking,
@@ -179,23 +180,57 @@ function BookingDetailDialog({
 }
 
 const Bookings = () => {
+
   const bookings = useBookings();
+  const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(10);
-  const totalPages = Math.ceil(bookings.length / perPage);
-  const pagedBookings = bookings.slice((page - 1) * perPage, page * perPage);
   const clients = useClients();
   const packages = usePackages();
   const vendors = useVendors();
   const adat = useAdat();
 
+  // Filtering
+  const filteredBookings = bookings.filter((b) => {
+    const client = clients.find((c) => c.id === b.clientId);
+    const pkg = packages.find((p) => p.id === b.packageId);
+    const kodeBooking = String(b.code || b.id || "").toLowerCase();
+    const namaClient = (b.clientName || (client ? `${client.name} & ${client.partner}` : "")).toLowerCase();
+    const tanggalAcara = b.eventDate ? formatDate(b.eventDate).toLowerCase() : "";
+    const paket = (b.packageSnapshot?.name || pkg?.name || "").toLowerCase();
+    const status = (b.eventStatus || "draft").toLowerCase();
+    const q = search.toLowerCase();
+    return (
+      kodeBooking.includes(q) ||
+      namaClient.includes(q) ||
+      tanggalAcara.includes(q) ||
+      paket.includes(q) ||
+      status.includes(q)
+    );
+  });
+
+  const totalPages = Math.ceil(filteredBookings.length / perPage);
+  const pagedBookings = filteredBookings.slice((page - 1) * perPage, page * perPage);
+
+  // Reset page ke 1 jika search/perPage berubah
+  useEffect(() => { setPage(1); }, [search, perPage]);
+
   return (
     <>
+
       <PageHeader
         title="Booking Event"
-        subtitle={`${bookings.length} booking terdaftar`}
+        subtitle={`${filteredBookings.length} booking ditemukan`}
         actions={<AddBookingEventDialog />}
       />
+
+      <div className="mb-4 max-w-sm">
+        <Input
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Cari kode booking, nama client, tanggal, paket, status..."
+        />
+      </div>
 
       <Card className="border-border shadow-soft overflow-hidden">
         <div className="overflow-x-auto">

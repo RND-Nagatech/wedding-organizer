@@ -279,43 +279,7 @@ const Timeline = ({ bookingId }: { bookingId?: string }) => {
         }
       />
 
-      <div className="grid lg:grid-cols-3 gap-4 mb-6">
-        <Card className="p-5 border-border shadow-soft bg-gradient-card lg:col-span-1">
-          <div className="text-xs uppercase tracking-wider text-muted-foreground">Progress Booking</div>
-          <div className="font-display text-3xl text-primary mt-2">{progress}%</div>
-          <div className="text-sm text-muted-foreground mt-1">{done} / {selectedTasks.length} selesai</div>
-          <div className="mt-3 h-2 bg-muted rounded-full overflow-hidden">
-            <div className="h-full bg-gradient-primary transition-smooth" style={{ width: `${progress}%` }} />
-          </div>
-        </Card>
-
-        <Card className="p-5 border-border shadow-soft bg-gradient-card lg:col-span-2">
-          <div className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Progress per Booking</div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="text-xs uppercase tracking-wider text-muted-foreground">
-                <tr>
-                  <th className="text-left py-2 pr-3 font-medium">Booking</th>
-                  <th className="text-left py-2 pr-3 font-medium">Selesai</th>
-                  <th className="text-left py-2 pr-3 font-medium">%</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {progressByBooking.slice(0, 6).map((r) => (
-                  <tr key={r.kode_booking}>
-                    <td className="py-2 pr-3 font-medium">{r.kode_booking.toUpperCase()}</td>
-                    <td className="py-2 pr-3">{r.done} / {r.total}</td>
-                    <td className="py-2 pr-3 text-primary font-medium">{r.percent}%</td>
-                  </tr>
-                ))}
-                {progressByBooking.length === 0 ? (
-                  <tr><td className="py-3 text-muted-foreground" colSpan={3}>—</td></tr>
-                ) : null}
-              </tbody>
-            </table>
-          </div>
-        </Card>
-      </div>
+      {/* Card progress per booking dihilangkan sesuai permintaan */}
 
       <Card className="border-border shadow-soft overflow-hidden">
         <div className="p-4 border-b border-border bg-muted/20">
