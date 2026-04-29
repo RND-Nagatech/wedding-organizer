@@ -54,6 +54,7 @@ import ClientWishlist from "./pages/client/Wishlist";
 import ClientCatalogBaju from "./pages/client/ClientCatalogBaju";
 import ClientCatalogDekorasi from "./pages/client/ClientCatalogDekorasi";
 import ClientCatalogMakeup from "./pages/client/ClientCatalogMakeup";
+import Favorites from "./pages/client/Favorites";
 import DigitalForm from "./pages/client/DigitalForm";
 import MyPlanning from "./pages/client/MyPlanning";
 import MyPreferences from "./pages/client/MyPreferences";
@@ -131,6 +132,7 @@ const App = () => (
                         <Route path="catalog-baju" element={<ClientCatalogBaju />} />
                         <Route path="catalog-dekorasi" element={<ClientCatalogDekorasi />} />
                         <Route path="catalog-makeup" element={<ClientCatalogMakeup />} />
+                        <Route path="favorites" element={<Favorites />} />
                         <Route path="formulir" element={<DigitalForm />} />
                         <Route path="references" element={<ClientReferences />} />
                         <Route path="wishlist" element={<ClientWishlist />} />

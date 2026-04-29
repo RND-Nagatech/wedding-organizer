@@ -4,31 +4,43 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useKatalogMakeup } from "@/lib/dataStore";
-import { pickDraftItem } from "@/lib/bookingDraft";
+import { store, useKatalogFavorit, useKatalogMakeup } from "@/lib/dataStore";
 import { formatIDR } from "@/lib/mockData";
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { CheckCircle2 } from "lucide-react";
+import { Heart } from "lucide-react";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 const API_ORIGIN = (import.meta.env.VITE_API_URL || "http://localhost:5001/api").replace(/\/api\/?$/, "");
 
 const kategoriOptions = ["natural", "bold", "glam", "adat", "modern"] as const;
 
 export default function ClientCatalogMakeup() {
+  const { user } = useAuth();
+  const clientId = String(user?.clientId || "");
   const list = useKatalogMakeup();
-  const nav = useNavigate();
+  const favs = useKatalogFavorit();
 
   const [q, setQ] = useState("");
   const [filterKategori, setFilterKategori] = useState<string>("all");
+  const [filterMode, setFilterMode] = useState<"all" | "fav">("all");
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<any>(null);
 
+  const favSet = useMemo(() => {
+    const ids = favs
+      .filter((f) => f.client_id === clientId && f.katalog_type === "makeup")
+      .map((f) => String(f.katalog_id));
+    return new Set(ids);
+  }, [favs, clientId]);
+
   const rows = useMemo(() => {
+    const onlyFav = filterMode === "fav";
     return list
       .filter((x) => (x.status || "aktif") === "aktif")
       .filter((x) => (filterKategori === "all" ? true : String(x.kategori || "") === filterKategori))
+      .filter((x) => (onlyFav ? favSet.has(String(x.id)) : true))
       .filter((x) => {
         const needle = q.trim().toLowerCase();
         if (!needle) return true;
@@ -37,7 +49,7 @@ export default function ClientCatalogMakeup() {
           String(x.vendor_mua_nama || "").toLowerCase().includes(needle)
         );
       });
-  }, [list, filterKategori, q]);
+  }, [list, filterKategori, q, filterMode, favSet]);
 
   return (
     <>
@@ -48,6 +60,16 @@ export default function ClientCatalogMakeup() {
           <div className="space-y-1.5 sm:col-span-3">
             <Label>Cari</Label>
             <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari nama style / MUA..." />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Mode</Label>
+            <Select value={filterMode} onValueChange={(v: any) => setFilterMode(v)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Semua Katalog</SelectItem>
+                <SelectItem value="fav">Favorit Saya</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-1.5">
             <Label>Kategori</Label>
@@ -70,31 +92,53 @@ export default function ClientCatalogMakeup() {
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
               {rows.map((x) => {
                 const src = x.foto ? `${API_ORIGIN}${x.foto}` : "";
+                const isFav = favSet.has(String(x.id));
                 return (
-                  <button
-                    key={x.id}
-                    type="button"
-                    className="text-left rounded-xl overflow-hidden border border-border bg-background hover:shadow-elegant transition-smooth"
-                    onClick={() => {
-                      setSelected(x);
-                      setOpen(true);
-                    }}
-                  >
-                    <div className="aspect-square bg-muted/30">
-                      {src ? (
-                        <img src={src} alt={x.nama_style} className="w-full h-full object-cover" loading="lazy" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">No Photo</div>
-                      )}
-                    </div>
-                    <div className="p-3">
-                      <div className="font-medium truncate">{x.nama_style}</div>
-                      <div className="text-xs text-muted-foreground truncate capitalize">
-                        {x.kategori} · {x.vendor_mua_nama || "—"}
+                  <div key={x.id} className="relative">
+                    <button
+                      type="button"
+                      className="w-full text-left rounded-xl overflow-hidden border border-border bg-background hover:shadow-elegant transition-smooth"
+                      onClick={() => {
+                        setSelected(x);
+                        setOpen(true);
+                      }}
+                    >
+                      <div className="aspect-square bg-muted/30">
+                        {src ? (
+                          <img src={src} alt={x.nama_style} className="w-full h-full object-cover" loading="lazy" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">No Photo</div>
+                        )}
                       </div>
-                      <div className="text-xs text-muted-foreground truncate">{formatIDR(x.harga || 0)}</div>
-                    </div>
-                  </button>
+                      <div className="p-3">
+                        <div className="font-medium truncate">{x.nama_style}</div>
+                        <div className="text-xs text-muted-foreground truncate capitalize">
+                          {x.kategori} · {x.vendor_mua_nama || "—"}
+                        </div>
+                        <div className="text-xs text-muted-foreground truncate">{formatIDR(x.harga || 0)}</div>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      className="absolute top-2 right-2 inline-flex items-center justify-center w-9 h-9 rounded-full bg-background/90 border border-border shadow-sm"
+                      onClick={async (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (!clientId) return;
+                        try {
+                          const res = await store.toggleKatalogFavorit({ client_id: clientId, katalog_type: "makeup", katalog_id: String(x.id) });
+                          toast.success(res.action === "added" ? "Ditambahkan ke favorit" : "Dihapus dari favorit");
+                        } catch (err: any) {
+                          toast.error(err?.message || "Gagal update favorit");
+                        }
+                      }}
+                      aria-label={isFav ? "Hapus favorit" : "Tambah favorit"}
+                      title={isFav ? "Hapus favorit" : "Tambah favorit"}
+                    >
+                      <Heart className={isFav ? "w-4 h-4 text-primary fill-primary" : "w-4 h-4 text-muted-foreground"} />
+                    </button>
+                  </div>
                 );
               })}
             </div>
@@ -149,14 +193,19 @@ export default function ClientCatalogMakeup() {
           <DialogFooter>
             <Button
               className="bg-primary hover:bg-primary/90"
-              onClick={() => {
+              onClick={async () => {
                 if (!selected) return;
-                pickDraftItem("makeup", selected.id);
-                setOpen(false);
-                nav("/client/booking");
+                if (!clientId) return;
+                try {
+                  const res = await store.toggleKatalogFavorit({ client_id: clientId, katalog_type: "makeup", katalog_id: String(selected.id) });
+                  toast.success(res.action === "added" ? "Ditambahkan ke favorit" : "Dihapus dari favorit");
+                  if (filterMode === "fav" && res.action === "removed") setOpen(false);
+                } catch (err: any) {
+                  toast.error(err?.message || "Gagal update favorit");
+                }
               }}
             >
-              <CheckCircle2 className="w-4 h-4 mr-1.5" /> Pilih
+              <Heart className="w-4 h-4 mr-1.5" /> {selected && favSet.has(String(selected.id)) ? "Hapus Favorit" : "Tambah Favorit"}
             </Button>
           </DialogFooter>
         </DialogContent>

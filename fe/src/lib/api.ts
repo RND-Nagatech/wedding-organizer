@@ -494,6 +494,30 @@ export async function updateTimelineClient(id: string, payload: any) {
   return res.json();
 }
 
+// Favorit katalog client (tt_katalog_favorit)
+export async function ambilKatalogFavorit(params?: { client_id?: string; katalog_type?: string; kode_booking?: string }) {
+  const qs = params ? `?${new URLSearchParams(params as any).toString()}` : "";
+  const res = await fetch(`${API_BASE}/tt_katalog_favorit${qs}`);
+  if (!res.ok) throw new Error("Gagal mengambil favorit katalog");
+  return res.json();
+}
+
+export async function tambahKatalogFavorit(payload: any) {
+  const res = await fetch(`${API_BASE}/tt_katalog_favorit`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error("Gagal menambah favorit katalog");
+  return res.json();
+}
+
+export async function hapusKatalogFavorit(id: string) {
+  const res = await fetch(`${API_BASE}/tt_katalog_favorit/${id}`, { method: "DELETE" });
+  if (!res.ok) throw new Error("Gagal menghapus favorit katalog");
+  return res.json();
+}
+
 // Tahap 12: Keuangan (tt_keuangan)
 export async function ambilKeuangan(params?: { tgl_from?: string; tgl_to?: string; kategori?: string }) {
   const qs = params ? `?${new URLSearchParams(params as any).toString()}` : "";

@@ -15,6 +15,10 @@ import {
   useBookings,
   useChecklistBarang,
   useCrewAssignments,
+  useKatalogBaju,
+  useKatalogDekorasi,
+  useKatalogFavorit,
+  useKatalogMakeup,
   usePackages,
   usePayments,
   useReferensiClient,
@@ -97,6 +101,10 @@ export default function ProjectDetail() {
   const references = useReferensiClient();
   const wishlist = useWishlistClient();
   const timeline = useTimelineEvent();
+  const favs = useKatalogFavorit();
+  const katalogBaju = useKatalogBaju();
+  const katalogDekorasi = useKatalogDekorasi();
+  const katalogMakeup = useKatalogMakeup();
 
   const booking = bookings.find((b) => b.id === id);
   const pkg = packages.find((p) => p.id === booking?.packageId);
@@ -129,6 +137,22 @@ export default function ProjectDetail() {
     if (!kodeBooking) return [];
     return references.filter((r) => String(r.kode_booking || "").toLowerCase() === kodeBooking.toLowerCase());
   }, [references, kodeBooking]);
+
+  const favForClient = useMemo(() => {
+    if (!booking?.clientId) return [];
+    return favs.filter((f) => String(f.client_id) === String(booking.clientId));
+  }, [favs, booking?.clientId]);
+
+  const favGroups = useMemo(() => {
+    const bajuIds = favForClient.filter((f) => f.katalog_type === "baju").map((f) => String(f.katalog_id));
+    const dekorIds = favForClient.filter((f) => f.katalog_type === "dekorasi").map((f) => String(f.katalog_id));
+    const makeupIds = favForClient.filter((f) => f.katalog_type === "makeup").map((f) => String(f.katalog_id));
+    return {
+      baju: katalogBaju.filter((x) => bajuIds.includes(String(x.id))),
+      dekorasi: katalogDekorasi.filter((x) => dekorIds.includes(String(x.id))),
+      makeup: katalogMakeup.filter((x) => makeupIds.includes(String(x.id))),
+    };
+  }, [favForClient, katalogBaju, katalogDekorasi, katalogMakeup]);
 
   const wishlistForBooking = useMemo(() => {
     if (!kodeBooking) return [];
@@ -653,26 +677,36 @@ export default function ProjectDetail() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="preferences">
-          <div className="grid gap-4 lg:grid-cols-2">
-            <Card className="p-6 border-border shadow-soft space-y-3">
-              <div className="font-medium">Preferensi Katalog</div>
-              <div className="grid sm:grid-cols-3 gap-3 text-sm">
-                <div className="rounded-md border border-border p-3">
-                  <div className="text-xs text-muted-foreground">Baju</div>
-                  <div className="font-medium mt-1">{booking.preferensiKatalogSnapshot?.baju?.nama_baju || "—"}</div>
-                </div>
-                <div className="rounded-md border border-border p-3">
-                  <div className="text-xs text-muted-foreground">Dekorasi</div>
-                  <div className="font-medium mt-1">{booking.preferensiKatalogSnapshot?.dekorasi?.nama_dekorasi || "—"}</div>
-                </div>
-                <div className="rounded-md border border-border p-3">
-                  <div className="text-xs text-muted-foreground">Makeup</div>
-                  <div className="font-medium mt-1">{booking.preferensiKatalogSnapshot?.makeup?.nama_style || "—"}</div>
-                </div>
-              </div>
-              <div className="text-xs text-muted-foreground">Berikutnya: review referensi & wishlist client untuk finalisasi.</div>
-            </Card>
+	      <TabsContent value="preferences">
+	          <div className="grid gap-4 lg:grid-cols-2">
+	            <Card className="p-6 border-border shadow-soft space-y-3">
+	              <div className="font-medium">Katalog Favorit Client</div>
+	              <div className="text-sm text-muted-foreground">Favorit hanya sebagai referensi selera client (bukan pilihan final).</div>
+	              <div className="grid sm:grid-cols-3 gap-3 text-sm">
+	                <div className="rounded-md border border-border p-3">
+	                  <div className="text-xs text-muted-foreground">Baju</div>
+	                  <div className="font-medium mt-1">{favGroups.baju.length} item</div>
+	                  <div className="text-xs text-muted-foreground mt-1 truncate">
+	                    {favGroups.baju.slice(0, 2).map((x) => x.nama_baju).join(", ") || "—"}
+	                  </div>
+	                </div>
+	                <div className="rounded-md border border-border p-3">
+	                  <div className="text-xs text-muted-foreground">Dekorasi</div>
+	                  <div className="font-medium mt-1">{favGroups.dekorasi.length} item</div>
+	                  <div className="text-xs text-muted-foreground mt-1 truncate">
+	                    {favGroups.dekorasi.slice(0, 2).map((x) => x.nama_dekorasi).join(", ") || "—"}
+	                  </div>
+	                </div>
+	                <div className="rounded-md border border-border p-3">
+	                  <div className="text-xs text-muted-foreground">Makeup</div>
+	                  <div className="font-medium mt-1">{favGroups.makeup.length} item</div>
+	                  <div className="text-xs text-muted-foreground mt-1 truncate">
+	                    {favGroups.makeup.slice(0, 2).map((x) => x.nama_style).join(", ") || "—"}
+	                  </div>
+	                </div>
+	              </div>
+	              <div className="text-xs text-muted-foreground">Berikutnya: review referensi & wishlist client untuk finalisasi.</div>
+	            </Card>
 
             <Card className="p-6 border-border shadow-soft space-y-3">
               <div className="font-medium">Ringkasan</div>

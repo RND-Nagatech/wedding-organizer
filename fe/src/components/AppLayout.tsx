@@ -103,6 +103,7 @@ const clientNav: NavItem[] = [
       { to: "/client/catalog-baju", label: "Katalog Baju", icon: ListChecks },
       { to: "/client/catalog-dekorasi", label: "Katalog Dekorasi", icon: ListChecks },
       { to: "/client/catalog-makeup", label: "Katalog Makeup", icon: ListChecks },
+      { to: "/client/favorites", label: "Favorit Saya", icon: Heart },
       { to: "/client/references", label: "Upload Referensi", icon: ListChecks },
       { to: "/client/wishlist", label: "Wishlist", icon: ListChecks },
     ],

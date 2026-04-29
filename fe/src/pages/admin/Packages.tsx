@@ -141,14 +141,6 @@ const Packages = ({
                 </ul>
               </div>
               <div>
-                <div className="font-semibold mb-1">Kategori Vendor</div>
-                <div className="text-sm">
-                  {(selected.vendorIds && selected.vendorIds.length > 0)
-                    ? getVendorNames(selected.vendorIds).join(", ")
-                    : "-"}
-                </div>
-              </div>
-              <div>
                 <div className="font-semibold mb-1">Vendor Rekomendasi</div>
                 <div className="text-sm">
                   {(selected.vendorIds && selected.vendorIds.length > 0)

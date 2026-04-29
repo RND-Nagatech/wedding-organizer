@@ -70,6 +70,7 @@ import {
 } from "./api";
 import { ambilKeuangan, tambahKeuangan, editKeuangan, hapusKeuangan } from "./api";
 import { ambilAddon, tambahAddon, editAddon, hapusAddon } from "./api";
+import { ambilKatalogFavorit, tambahKatalogFavorit, hapusKatalogFavorit } from "./api";
 
 function deriveStatusBooking(input: { status_booking?: string; status_review?: string; status_event?: string }) {
   const statusBooking = String(input.status_booking || "").trim();
@@ -233,6 +234,15 @@ export type Addon = {
   status: "aktif" | "nonaktif";
 };
 
+export type KatalogFavorit = {
+  id: string;
+  client_id: string;
+  kode_booking?: string;
+  katalog_type: "baju" | "dekorasi" | "makeup";
+  katalog_id: string;
+  createdAt?: string;
+};
+
 type State = {
   clients: Client[];
   vendors: Vendor[];
@@ -252,6 +262,7 @@ type State = {
   timelineEvent: TimelineEventTask[];
   keuangan: KeuanganTrx[];
   addons: Addon[];
+  katalogFavorit: KatalogFavorit[];
 };
 
 let state: State = {
@@ -273,6 +284,7 @@ let state: State = {
   timelineEvent: [],
   keuangan: [],
   addons: [],
+  katalogFavorit: [],
 };
 
 const listeners = new Set<() => void>();
@@ -1219,6 +1231,55 @@ export const store = {
     }));
   },
 
+  // Favorit katalog client
+  refreshKatalogFavorit: async (params?: { client_id?: string; katalog_type?: string; kode_booking?: string }) => {
+    const rows = await ambilKatalogFavorit(params);
+    setState((s) => ({
+      ...s,
+      katalogFavorit: (rows || []).map((r: any) => ({
+        id: r._id,
+        client_id: String(r.client_id?._id || r.client_id),
+        kode_booking: r.kode_booking || undefined,
+        katalog_type: r.katalog_type,
+        katalog_id: String(r.katalog_id?._id || r.katalog_id),
+        createdAt: r.createdAt,
+      })),
+    }));
+  },
+  addKatalogFavorit: async (payload: { client_id: string; katalog_type: KatalogFavorit["katalog_type"]; katalog_id: string; kode_booking?: string }) => {
+    const row = await tambahKatalogFavorit(payload);
+    const next: KatalogFavorit = {
+      id: row._id,
+      client_id: String(row.client_id?._id || row.client_id),
+      kode_booking: row.kode_booking || undefined,
+      katalog_type: row.katalog_type,
+      katalog_id: String(row.katalog_id?._id || row.katalog_id),
+      createdAt: row.createdAt,
+    };
+    setState((s) => {
+      const existsIdx = s.katalogFavorit.findIndex(
+        (x) => x.client_id === next.client_id && x.katalog_type === next.katalog_type && x.katalog_id === next.katalog_id
+      );
+      const list = existsIdx >= 0 ? s.katalogFavorit.map((x, i) => (i === existsIdx ? next : x)) : [next, ...s.katalogFavorit];
+      return { ...s, katalogFavorit: list };
+    });
+  },
+  deleteKatalogFavorit: async (id: string) => {
+    await hapusKatalogFavorit(id);
+    setState((s) => ({ ...s, katalogFavorit: s.katalogFavorit.filter((x) => x.id !== id) }));
+  },
+  toggleKatalogFavorit: async (payload: { client_id: string; katalog_type: KatalogFavorit["katalog_type"]; katalog_id: string; kode_booking?: string }) => {
+    const existing = state.katalogFavorit.find(
+      (x) => x.client_id === String(payload.client_id) && x.katalog_type === payload.katalog_type && x.katalog_id === String(payload.katalog_id)
+    );
+    if (existing) {
+      await store.deleteKatalogFavorit(existing.id);
+      return { action: "removed" as const };
+    }
+    await store.addKatalogFavorit(payload);
+    return { action: "added" as const };
+  },
+
   // Tahap 12: Keuangan
   addKeuangan: async (payload: Omit<KeuanganTrx, "id" | "no_trx"> & { no_trx?: string }) => {
     const row = await tambahKeuangan(payload);
@@ -1356,6 +1417,34 @@ export const useAddons = () => {
     }
   }, [initialized]);
   return addons;
+};
+
+export const useKatalogFavorit = () => {
+  const [initialized, setInitialized] = useState(false);
+  const rows = useSyncExternalStore(subscribe, () => state.katalogFavorit, () => state.katalogFavorit);
+  useEffect(() => {
+    if (!initialized) {
+      ambilKatalogFavorit()
+        .then((data) => {
+          setState((s) => ({
+            ...s,
+            katalogFavorit: (data || []).map((r: any) => ({
+              id: r._id,
+              client_id: String(r.client_id?._id || r.client_id),
+              kode_booking: r.kode_booking || undefined,
+              katalog_type: r.katalog_type,
+              katalog_id: String(r.katalog_id?._id || r.katalog_id),
+              createdAt: r.createdAt,
+            })),
+          }));
+          setInitialized(true);
+        })
+        .catch(() => {
+          setInitialized(true);
+        });
+    }
+  }, [initialized]);
+  return rows;
 };
 export const useBookings = () => {
   const [initialized, setInitialized] = useState(false);

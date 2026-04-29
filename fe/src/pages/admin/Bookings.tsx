@@ -114,7 +114,7 @@ function BookingDetailDialog({
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-xs uppercase tracking-wider text-muted-foreground">Vendor Booking</div>
-                <div className="text-sm text-muted-foreground">Status vendor per tanggal acara (anti double booking)</div>
+                <div className="text-sm text-muted-foreground">Status vendor per tanggal acara</div>
               </div>
             </div>
 

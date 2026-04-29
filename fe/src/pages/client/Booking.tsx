@@ -3,7 +3,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatDate, formatIDR } from "@/lib/mockData";
 import { StatusBadge } from "@/components/StatusBadge";
-import { CalendarDays, MapPin, Users as UsersIcon, Heart, ExternalLink, BadgeCheck } from "lucide-react";
+import { CalendarDays, MapPin, Users as UsersIcon, Heart, BadgeCheck } from "lucide-react";
 import { store, useAdat, useAddons, useBookings, useClients, useKatalogBaju, useKatalogDekorasi, useKatalogMakeup, usePackages } from "@/lib/dataStore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Link, useNavigate } from "react-router-dom";
-import { clearBookingDraft, readBookingDraft } from "@/lib/bookingDraft";
+import { clearBookingDraft, readBookingDraft, writeBookingDraft } from "@/lib/bookingDraft";
 import { statusLabel } from "@/lib/labels";
 
 const sentinelNone = "__none__";
@@ -28,15 +28,16 @@ const ClientBooking = () => {
   const packages = usePackages();
   const adat = useAdat();
   const addons = useAddons();
-  const katalogBaju = useKatalogBaju();
-  const katalogDekorasi = useKatalogDekorasi();
-  const katalogMakeup = useKatalogMakeup();
+  // keep katalog loaded for other client pages; booking does not select katalog as final
+  useKatalogBaju();
+  useKatalogDekorasi();
+  useKatalogMakeup();
 
   const client = clients.find((c) => c.id === cId);
   const booking = bookings.find((b) => b.clientId === cId);
   const pkg = packages.find((p) => p.id === client?.packageId);
 
-  const draft = useMemo(() => readBookingDraft(), []);
+  const draft = useMemo(() => readBookingDraft(cId), [cId]);
 
   const [form, setForm] = useState({
     eventDate: "",
@@ -44,31 +45,51 @@ const ClientBooking = () => {
     guests: 0,
     adatId: sentinelNone,
     note: "",
-    bajuId: sentinelNone,
-    dekorasiId: sentinelNone,
-    makeupId: sentinelNone,
     addonsQty: {} as Record<string, number>,
   });
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // default values when starting a new booking
   useEffect(() => {
     if (!client || booking) return;
     setForm((f) => ({
       ...f,
       eventDate: client.weddingDate || "",
-      bajuId: draft.bajuId || sentinelNone,
-      dekorasiId: draft.dekorasiId || sentinelNone,
-      makeupId: draft.makeupId || sentinelNone,
     }));
-  }, [client, booking, draft.bajuId, draft.dekorasiId, draft.makeupId]);
+  }, [client?.id, booking?.id]);
 
-  const selectedBaju = katalogBaju.find((x) => x.id === form.bajuId);
-  const selectedDekorasi = katalogDekorasi.find((x) => x.id === form.dekorasiId);
-  const selectedMakeup = katalogMakeup.find((x) => x.id === form.makeupId);
-  const viewSelectedBaju = booking?.preferensiKatalog?.bajuId ? katalogBaju.find((x) => x.id === booking.preferensiKatalog?.bajuId) : undefined;
-  const viewSelectedDekorasi = booking?.preferensiKatalog?.dekorasiId ? katalogDekorasi.find((x) => x.id === booking.preferensiKatalog?.dekorasiId) : undefined;
-  const viewSelectedMakeup = booking?.preferensiKatalog?.makeupId ? katalogMakeup.find((x) => x.id === booking.preferensiKatalog?.makeupId) : undefined;
+  // load saved draft (per client) into form
+  useEffect(() => {
+    if (!client || booking) return;
+    setForm((f) => ({
+      ...f,
+      eventDate: typeof draft.eventDate === "string" ? draft.eventDate : f.eventDate,
+      venue: typeof draft.venue === "string" ? draft.venue : f.venue,
+      guests: typeof draft.guests === "number" ? draft.guests : f.guests,
+      adatId: typeof draft.adatId === "string" ? draft.adatId : f.adatId,
+      note: typeof draft.note === "string" ? draft.note : f.note,
+      addonsQty: typeof draft.addonsQty === "object" && draft.addonsQty ? (draft.addonsQty as any) : f.addonsQty,
+    }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [client?.id, booking?.id, cId]);
+
+  // autosave draft while booking not submitted
+  useEffect(() => {
+    if (!client || booking) return;
+    try {
+      writeBookingDraft(cId, {
+        eventDate: form.eventDate || undefined,
+        venue: form.venue || undefined,
+        guests: Number(form.guests || 0) || 0,
+        adatId: form.adatId && form.adatId !== sentinelNone ? form.adatId : undefined,
+        note: form.note || undefined,
+        addonsQty: form.addonsQty || {},
+      });
+    } catch {
+      // ignore storage error
+    }
+  }, [client?.id, booking?.id, cId, form]);
 
   if (!booking) {
     if (!client) {
@@ -143,13 +164,8 @@ const ClientBooking = () => {
                   note: form.note || undefined,
                   vendorSelectedIds: [],
                   addons: pickedAddons,
-                  preferensiKatalog: {
-                    bajuId: form.bajuId === sentinelNone ? undefined : form.bajuId,
-                    dekorasiId: form.dekorasiId === sentinelNone ? undefined : form.dekorasiId,
-                    makeupId: form.makeupId === sentinelNone ? undefined : form.makeupId,
-                  },
                 });
-                clearBookingDraft();
+                clearBookingDraft(cId);
                 toast.success("Booking berhasil dikirim. Menunggu review WO.");
               } catch (err: any) {
                 toast.error(err?.message || "Gagal membuat booking");
@@ -238,90 +254,44 @@ const ClientBooking = () => {
               {errors.adatId ? <div className="text-xs text-destructive">{errors.adatId}</div> : null}
             </div>
 
-            <Card className="p-4 border-border shadow-soft space-y-3">
-              <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="rounded-lg border border-border p-4 bg-muted/10">
+              <div className="flex items-start justify-between gap-3 flex-wrap">
                 <div>
-                  <div className="text-xs uppercase tracking-wider text-muted-foreground">Preferensi Katalog</div>
-                  <div className="text-sm text-muted-foreground">Pilih jika ada yang cocok. Anda bisa lihat katalog dulu.</div>
+                  <div className="text-xs uppercase tracking-wider text-muted-foreground">Katalog Inspirasi</div>
+                  <div className="text-sm text-muted-foreground">
+                    Baju/dekorasi/makeup tidak dipilih sebagai final di booking. Silakan tandai favorit dari katalog untuk referensi tim WO.
+                  </div>
                 </div>
-                <Button type="button" variant="outline" onClick={() => {
-                  setForm((f) => ({ ...f, bajuId: sentinelNone, dekorasiId: sentinelNone, makeupId: sentinelNone }));
-                  clearBookingDraft();
-                  toast.success("Preferensi katalog dikosongkan");
-                }}>
-                  Reset
+                <Button type="button" variant="outline" onClick={() => nav("/client/favorites")}>
+                  Favorit Saya
                 </Button>
               </div>
-
-              <div className="grid sm:grid-cols-3 gap-3">
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <Label>Baju</Label>
-                    <Button type="button" size="sm" variant="ghost" onClick={() => nav("/client/catalog-baju")}>
-                      Lihat <ExternalLink className="w-3.5 h-3.5 ml-1" />
-                    </Button>
-                  </div>
-                  <Select value={form.bajuId} onValueChange={(v) => setForm((f) => ({ ...f, bajuId: v }))}>
-                    <SelectTrigger><SelectValue placeholder="Pilih baju (opsional)" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={sentinelNone}>—</SelectItem>
-                      {katalogBaju
-                        .filter((x) => (x.status || "tersedia") === "tersedia")
-                        .map((x) => (
-                          <SelectItem key={x.id} value={x.id}>{x.nama_baju}</SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <Label>Dekorasi</Label>
-                    <Button type="button" size="sm" variant="ghost" onClick={() => nav("/client/catalog-dekorasi")}>
-                      Lihat <ExternalLink className="w-3.5 h-3.5 ml-1" />
-                    </Button>
-                  </div>
-                  <Select value={form.dekorasiId} onValueChange={(v) => setForm((f) => ({ ...f, dekorasiId: v }))}>
-                    <SelectTrigger><SelectValue placeholder="Pilih dekorasi (opsional)" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={sentinelNone}>—</SelectItem>
-                      {katalogDekorasi
-                        .filter((x) => (x.status || "aktif") === "aktif")
-                        .map((x) => (
-                          <SelectItem key={x.id} value={x.id}>{x.nama_dekorasi}</SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <Label>Makeup</Label>
-                    <Button type="button" size="sm" variant="ghost" onClick={() => nav("/client/catalog-makeup")}>
-                      Lihat <ExternalLink className="w-3.5 h-3.5 ml-1" />
-                    </Button>
-                  </div>
-                  <Select value={form.makeupId} onValueChange={(v) => setForm((f) => ({ ...f, makeupId: v }))}>
-                    <SelectTrigger><SelectValue placeholder="Pilih makeup (opsional)" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={sentinelNone}>—</SelectItem>
-                      {katalogMakeup
-                        .filter((x) => (x.status || "aktif") === "aktif")
-                        .map((x) => (
-                          <SelectItem key={x.id} value={x.id}>{x.nama_style}</SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </Card>
+            </div>
 
             <div className="space-y-1.5">
               <Label>Catatan untuk WO (Opsional)</Label>
               <Textarea value={form.note} onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))} placeholder="Request/notes khusus..." />
             </div>
 
-            <div className="flex justify-end">
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  clearBookingDraft(cId);
+                  setForm({
+                    eventDate: client.weddingDate || "",
+                    venue: "",
+                    guests: 0,
+                    adatId: sentinelNone,
+                    note: "",
+                    addonsQty: {},
+                  });
+                  toast.success("Draft booking dikosongkan");
+                }}
+              >
+                Clear Draft
+              </Button>
               <Button type="submit" className="bg-primary hover:bg-primary/90" disabled={saving}>
                 {saving ? "Mengirim..." : "Kirim Booking"}
               </Button>
@@ -389,26 +359,7 @@ const ClientBooking = () => {
         </ul>
       </Card>
 
-      <Card className="p-6 border-border shadow-soft mt-6">
-        <div className="text-[11px] uppercase tracking-[0.2em] text-accent font-medium">Preferensi Katalog</div>
-        <div className="mt-3 grid sm:grid-cols-3 gap-3 text-sm">
-          <div className="p-3 rounded-lg border border-border">
-            <div className="text-xs text-muted-foreground">Baju</div>
-            <div className="font-medium mt-1">{viewSelectedBaju?.nama_baju || "—"}</div>
-          </div>
-          <div className="p-3 rounded-lg border border-border">
-            <div className="text-xs text-muted-foreground">Dekorasi</div>
-            <div className="font-medium mt-1">{viewSelectedDekorasi?.nama_dekorasi || "—"}</div>
-          </div>
-          <div className="p-3 rounded-lg border border-border">
-            <div className="text-xs text-muted-foreground">Makeup</div>
-            <div className="font-medium mt-1">{viewSelectedMakeup?.nama_style || "—"}</div>
-          </div>
-        </div>
-        <div className="text-xs text-muted-foreground mt-3">
-          Vendor final akan ditentukan oleh tim WO berdasarkan paket dan ketersediaan tanggal acara.
-        </div>
-      </Card>
+      {/* Favorit katalog tidak ditampilkan di card booking */}
     </>
   );
 };
