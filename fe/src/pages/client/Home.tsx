@@ -5,8 +5,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { formatDate, formatIDR } from "@/lib/mockData";
 import { Heart, Receipt, ListChecks, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
-import { useBookings, useChecklist, useClients, useInvoices, usePackages, usePayments, useTimelineEvent } from "@/lib/dataStore";
+import { useBookings, useChecklist, useClients, useInvoices, usePackages, usePayments } from "@/lib/dataStore";
 import { useEffect, useState } from "react";
+import { ambilTimelineClient, ambilFormulirDigitalByBooking } from "@/lib/api";
 
 const ClientHome = () => {
   const { user } = useAuth();
@@ -17,16 +18,17 @@ const ClientHome = () => {
   const invoices = useInvoices();
   const checklist = useChecklist();
   const payments = usePayments();
-  const timelineEvent = useTimelineEvent();
 
   const client = clients.find((c) => c.id === cId);
   const booking = bookings.find((b) => b.clientId === cId);
   const pkg = packages.find((p) => p.id === client?.packageId);
   const inv = invoices.find((i) => i.clientId === cId);
   const tasks = checklist.filter((t) => t.bookingId === booking?.id);
-  // Persiapan: pakai timelineEvent
-  const timelineTasks = timelineEvent.filter((t) => t.kode_booking === booking?.code || t.kode_booking === booking?.id);
-  const doneTimelineTasks = timelineTasks.filter((t) => t.status === "selesai").length;
+  const kodeBooking = String(booking?.code || "");
+  // Persiapan: pakai timeline client (big steps)
+  const [timelineSteps, setTimelineSteps] = useState<any[]>([]);
+  const doneTimelineSteps = timelineSteps.filter((t) => t.status === "selesai").length;
+  const [hasDigitalForm, setHasDigitalForm] = useState<boolean>(false);
   // Pembayaran: pakai payments
   const clientPayments = payments.filter((p) => p.clientCode === client?.code || p.clientName === client?.name);
   const totalDue = clientPayments.reduce((sum, p) => sum + (p.totalDue || 0), 0);
@@ -59,6 +61,28 @@ const ClientHome = () => {
     }, 1000);
     return () => clearInterval(timer);
   }, [eventDateStr]);
+
+  useEffect(() => {
+    if (!kodeBooking) {
+      setTimelineSteps([]);
+      setHasDigitalForm(false);
+      return;
+    }
+    (async () => {
+      try {
+        const rows = await ambilTimelineClient({ kode_booking: kodeBooking });
+        setTimelineSteps(Array.isArray(rows) ? rows : []);
+      } catch {
+        setTimelineSteps([]);
+      }
+      try {
+        await ambilFormulirDigitalByBooking(kodeBooking);
+        setHasDigitalForm(true);
+      } catch {
+        setHasDigitalForm(false);
+      }
+    })();
+  }, [kodeBooking]);
 
   return (
     <>
@@ -130,7 +154,7 @@ const ClientHome = () => {
               <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:translate-x-1 transition-smooth" />
             </div>
             <div className="text-xs uppercase tracking-wider text-muted-foreground">Persiapan</div>
-            <div className="font-display text-2xl mt-1">{doneTimelineTasks} / {timelineTasks.length}</div>
+            <div className="font-display text-2xl mt-1">{doneTimelineSteps} / {timelineSteps.length}</div>
             <div className="text-sm text-muted-foreground mt-1">tugas selesai</div>
           </Card>
         </Link>
@@ -168,6 +192,25 @@ const ClientHome = () => {
           </div>
         </Card>
       )}
+
+      {booking && ["approved", "ongoing"].includes(String(booking.statusBooking || "")) && !hasDigitalForm ? (
+        <Card className="mt-6 p-6 border-border shadow-soft bg-muted/10">
+          <div className="flex items-start justify-between flex-wrap gap-4">
+            <div>
+              <div className="text-xs uppercase tracking-wider text-muted-foreground">Aksi Diperlukan</div>
+              <div className="font-medium mt-1">Mohon isi Formulir Digital Acara</div>
+              <div className="text-sm text-muted-foreground mt-1">
+                Data formulir membantu tim WO menyiapkan rundown dan detail acara.
+              </div>
+            </div>
+            <Button className="bg-primary hover:bg-primary/90" asChild>
+              <Link to="/client/formulir">
+                Isi Formulir <ArrowRight className="w-4 h-4 ml-1.5" />
+              </Link>
+            </Button>
+          </div>
+        </Card>
+      ) : null}
     </>
   );
 };

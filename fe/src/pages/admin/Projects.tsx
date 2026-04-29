@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useBookings, usePackages } from "@/lib/dataStore";
 import { formatDate } from "@/lib/mockData";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { Eye } from "lucide-react";
 import { useMemo, useState } from "react";
 import { statusLabel } from "@/lib/labels";
@@ -15,21 +15,19 @@ import { statusLabel } from "@/lib/labels";
 export default function Projects() {
   const bookings = useBookings();
   const packages = usePackages();
+  const [searchParams] = useSearchParams();
 
   const [q, setQ] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
-  const [reviewStatus, setReviewStatus] = useState<string>("all");
-  const [eventStatus, setEventStatus] = useState<string>("all");
+  const [statusBooking, setStatusBooking] = useState<string>(() => searchParams.get("status") || "all");
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(10);
 
   const filteredRows = useMemo(() => {
     return bookings
-      .filter((b) => (b.eventStatus || "draft") !== "batal")
       .filter((b) => {
-        if (reviewStatus !== "all" && String(b.reviewStatus || "menunggu_review") !== reviewStatus) return false;
-        if (eventStatus !== "all" && String(b.eventStatus || "draft") !== eventStatus) return false;
+        if (statusBooking !== "all" && String(b.statusBooking || "menunggu_review") !== statusBooking) return false;
         if (dateFrom && String(b.eventDate || "") < dateFrom) return false;
         if (dateTo && String(b.eventDate || "") > dateTo) return false;
         if (q.trim()) {
@@ -41,14 +39,14 @@ export default function Projects() {
         return true;
       })
       .sort((a, b) => String(a.eventDate || "").localeCompare(String(b.eventDate || "")));
-  }, [bookings, packages, q, dateFrom, dateTo, reviewStatus, eventStatus]);
+  }, [bookings, packages, q, dateFrom, dateTo, statusBooking]);
 
   const totalPages = Math.ceil(filteredRows.length / perPage);
   const pagedRows = filteredRows.slice((page - 1) * perPage, page * perPage);
 
   // Reset page to 1 if filter changes
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useMemo(() => { setPage(1); }, [q, dateFrom, dateTo, reviewStatus, eventStatus, perPage]);
+  useMemo(() => { setPage(1); }, [q, dateFrom, dateTo, statusBooking, perPage]);
 
   return (
     <>
@@ -70,27 +68,18 @@ export default function Projects() {
               <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
             </div>
             <div className="space-y-1.5">
-              <Label>Status Review</Label>
-              <Select value={reviewStatus} onValueChange={setReviewStatus}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Semua</SelectItem>
-                  <SelectItem value="menunggu_review">{statusLabel("menunggu_review")}</SelectItem>
-                  <SelectItem value="approved">{statusLabel("approved")}</SelectItem>
-                  <SelectItem value="rejected">{statusLabel("rejected")}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Status Event</Label>
-              <Select value={eventStatus} onValueChange={setEventStatus}>
+              <Label>Status Booking</Label>
+              <Select value={statusBooking} onValueChange={setStatusBooking}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Semua</SelectItem>
                   <SelectItem value="draft">{statusLabel("draft")}</SelectItem>
-                  <SelectItem value="aktif">{statusLabel("aktif")}</SelectItem>
-                  <SelectItem value="selesai">{statusLabel("selesai")}</SelectItem>
-                  <SelectItem value="batal">{statusLabel("batal")}</SelectItem>
+                  <SelectItem value="menunggu_review">{statusLabel("menunggu_review")}</SelectItem>
+                  <SelectItem value="approved">{statusLabel("approved")}</SelectItem>
+                  <SelectItem value="rejected">{statusLabel("rejected")}</SelectItem>
+                  <SelectItem value="ongoing">{statusLabel("ongoing")}</SelectItem>
+                  <SelectItem value="completed">{statusLabel("completed")}</SelectItem>
+                  <SelectItem value="cancelled">{statusLabel("cancelled")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -105,8 +94,7 @@ export default function Projects() {
                 <TableHead>Client</TableHead>
                 <TableHead>Tanggal</TableHead>
                 <TableHead>Paket</TableHead>
-                <TableHead>Status Review</TableHead>
-                <TableHead>Status Event</TableHead>
+                <TableHead>Status Booking</TableHead>
                 <TableHead className="text-right w-[120px]">Aksi</TableHead>
               </TableRow>
             </TableHeader>
@@ -120,8 +108,7 @@ export default function Projects() {
                     <TableCell>{b.clientName || "—"}</TableCell>
                     <TableCell>{formatDate(b.eventDate)}</TableCell>
                     <TableCell className="text-primary font-medium">{pkgName}</TableCell>
-                    <TableCell>{statusLabel(b.reviewStatus || "menunggu_review")}</TableCell>
-                    <TableCell>{statusLabel(b.eventStatus || "draft")}</TableCell>
+                    <TableCell>{statusLabel(b.statusBooking || "menunggu_review")}</TableCell>
                     <TableCell className="text-right">
                       <Button asChild size="icon" variant="outline">
                         <Link to={`/admin/projects/${b.id}`}>
@@ -134,7 +121,7 @@ export default function Projects() {
               })}
               {pagedRows.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground py-10">
+                  <TableCell colSpan={6} className="text-center text-muted-foreground py-10">
                     Belum ada project.
                   </TableCell>
                 </TableRow>

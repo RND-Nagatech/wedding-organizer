@@ -42,7 +42,7 @@ export const AddPaymentDialog = () => {
   const client = clients.find((c) => c.id === booking?.clientId);
   const pkg = packages.find((p) => p.id === booking?.packageId);
 
-  const totalTagihan = booking?.packageSnapshot?.price ?? pkg?.price ?? 0;
+  const totalTagihan = Number(booking?.hargaFinalBooking) || Number(booking?.packageSnapshot?.price) || Number(pkg?.price) || 0;
   const totalPaid = payments
     .filter((p) => p.bookingCode === form.kode_booking)
     .reduce((s, p) => s + p.amountPaid, 0);

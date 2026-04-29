@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   useBookings,
   useChecklistBarang,
@@ -29,6 +30,7 @@ import { ambilFormulirDigitalByBooking, ambilKategoriVendor, ambilVendorAvailabl
 import { toast } from "sonner";
 import { ArrowLeft, ExternalLink, FileText, Plus, Trash2, Pencil } from "lucide-react";
 import { statusLabel } from "@/lib/labels";
+import { RupiahInput } from "@/components/RupiahInput";
 
 const API_ORIGIN = (import.meta.env.VITE_API_URL || "http://localhost:5001/api").replace(/\/api\/?$/, "");
 
@@ -142,6 +144,13 @@ export default function ProjectDetail() {
   const [availableByKategori, setAvailableByKategori] = useState<Record<string, any[]>>({});
   const [selectedVendorIds, setSelectedVendorIds] = useState<string[]>([]);
   const [approving, setApproving] = useState(false);
+  const [pricingSaving, setPricingSaving] = useState(false);
+  const [pricing, setPricing] = useState<any>({
+    hargaPaketFinal: 0,
+    biayaTambahan: 0,
+    diskon: 0,
+    addons: [] as any[],
+  });
 
   // Filters (embedded) for preference tab
   const [refQ, setRefQ] = useState("");
@@ -246,15 +255,57 @@ export default function ProjectDetail() {
   }, [kodeBooking, booking?.vendorSelectedIds]);
 
   useEffect(() => {
+    if (!booking) return;
+    setPricing({
+      hargaPaketFinal: Number(booking.hargaPaketFinal || booking.packageSnapshot?.price || pkg?.price || 0),
+      biayaTambahan: Number(booking.biayaTambahan || 0),
+      diskon: Number(booking.diskon || 0),
+      addons: (booking.addons || []).map((a: any) => ({
+        addonId: a.addonId,
+        nama_addon: a.nama_addon,
+        kategori_addon: a.kategori_addon,
+        deskripsi: a.deskripsi,
+        satuan: a.satuan,
+        qty: Number(a.qty) || 0,
+        harga_satuan_default: Number(a.harga_satuan_default) || 0,
+        harga_satuan_final: Number(a.harga_satuan_final) || Number(a.harga_satuan_default) || 0,
+      })),
+    });
+  }, [booking?.id, booking?.addons, booking?.hargaPaketFinal, booking?.biayaTambahan, booking?.diskon, booking?.packageSnapshot?.price, pkg?.price]);
+
+  useEffect(() => {
     ambilKategoriVendor()
       .then((data) => setKategoriOptions(Array.isArray(data) ? data : []))
       .catch(() => setKategoriOptions([]));
   }, []);
 
   const kategoriRows = useMemo(() => {
-    const rows = pkg?.vendorByCategory || [];
-    return rows.filter((r) => r.kategoriVendorId);
-  }, [pkg?.vendorByCategory]);
+    const rows = (pkg?.vendorByCategory || []).filter((r) => r.kategoriVendorId);
+    if (rows.length > 0) return rows;
+
+    // Backward compat: paket lama hanya punya vendorIds flat (tanpa konfigurasi per kategori).
+    // Untuk tetap bisa pilih vendor final, group vendorIds tersebut berdasarkan kategori vendor.
+    const allowed = new Set(
+      (pkg?.vendorIds || booking?.packageSnapshot?.vendorIds || []).map((x) => String(x)).filter(Boolean)
+    );
+    if (allowed.size === 0) return [];
+
+    const byKategori = new Map<string, string[]>();
+    for (const v of vendors) {
+      const id = String(v.id);
+      if (!allowed.has(id)) continue;
+      const kategoriId = String(v.categoryId || "");
+      if (!kategoriId) continue;
+      const list = byKategori.get(kategoriId) || [];
+      list.push(id);
+      byKategori.set(kategoriId, list);
+    }
+
+    return Array.from(byKategori.entries()).map(([kategoriVendorId, vendorIds]) => ({
+      kategoriVendorId,
+      vendorIds,
+    }));
+  }, [pkg?.vendorByCategory, pkg?.vendorIds, booking?.packageSnapshot?.vendorIds, vendors]);
 
   useEffect(() => {
     if (!booking || !pkg) return;
@@ -304,17 +355,68 @@ export default function ProjectDetail() {
 
   const pkgName = booking.packageSnapshot?.name || pkg?.name || "-";
   const pkgPrice = booking.packageSnapshot?.price ?? pkg?.price ?? 0;
+  const bookingFinalPrice = booking.hargaFinalBooking || 0;
 
   return (
     <>
       <PageHeader
         title={`Project ${String(booking.code || booking.id).toUpperCase()}`}
-        subtitle={`${booking.clientName || "—"} · ${formatDate(booking.eventDate)} · ${statusLabel(booking.reviewStatus || "menunggu_review")}`}
+        subtitle={`${booking.clientName || "—"} · ${formatDate(booking.eventDate)} · ${statusLabel(booking.statusBooking || "menunggu_review")}`}
         actions={
           <div className="flex items-center gap-2">
             <Button variant="outline" onClick={() => nav(-1)}>
               <ArrowLeft className="w-4 h-4 mr-1.5" /> Kembali
             </Button>
+            {(booking.statusBooking || "menunggu_review") === "approved" ? (
+              <Button
+                className="bg-primary hover:bg-primary/90"
+                onClick={async () => {
+                  try {
+                    await store.updateBookingStatus(booking.id, "ongoing");
+                    toast.success("Status booking: Ongoing");
+                  } catch (err: any) {
+                    toast.error(err?.message || "Gagal update status");
+                  }
+                }}
+              >
+                Mark Ongoing
+              </Button>
+            ) : null}
+            {(booking.statusBooking || "menunggu_review") === "ongoing" ? (
+              <Button
+                className="bg-primary hover:bg-primary/90"
+                onClick={async () => {
+                  try {
+                    await store.updateBookingStatus(booking.id, "completed");
+                    toast.success("Status booking: Completed");
+                  } catch (err: any) {
+                    toast.error(err?.message || "Gagal update status");
+                  }
+                }}
+              >
+                Mark Completed
+              </Button>
+            ) : null}
+            {["completed", "cancelled", "rejected"].includes(String(booking.statusBooking || "")) ? null : (
+              <ConfirmActionDialog
+                title="Cancel booking?"
+                description="Booking akan dibatalkan."
+                confirmText="Cancel"
+                onConfirm={async () => {
+                  try {
+                    await store.updateBookingStatus(booking.id, "cancelled");
+                    toast.success("Booking dibatalkan");
+                  } catch (err: any) {
+                    toast.error(err?.message || "Gagal membatalkan booking");
+                  }
+                }}
+                trigger={
+                  <Button variant="destructive">
+                    Cancel
+                  </Button>
+                }
+              />
+            )}
           </div>
         }
       />
@@ -339,11 +441,11 @@ export default function ProjectDetail() {
         </Card>
       </div>
 
-      <Tabs defaultValue="timeline" className="w-full">
+      <Tabs defaultValue="vendor" className="w-full">
         <TabsList className="flex flex-wrap h-auto">
+          <TabsTrigger value="vendor">Vendor Final</TabsTrigger>
           <TabsTrigger value="timeline">Timeline WO</TabsTrigger>
           <TabsTrigger value="preferences">Client Preference</TabsTrigger>
-          <TabsTrigger value="vendor">Vendor Final</TabsTrigger>
           <TabsTrigger value="crew">Crew</TabsTrigger>
           <TabsTrigger value="assets">Checklist Barang</TabsTrigger>
           <TabsTrigger value="payments">Payment Tracker</TabsTrigger>
@@ -901,60 +1003,237 @@ export default function ProjectDetail() {
               {vendorFinal.length === 0 ? <li className="text-muted-foreground">Belum ada vendor final.</li> : null}
             </ul>
 
-            {(booking.reviewStatus || "menunggu_review") === "menunggu_review" ? (
+            <div className="rounded-lg border border-border p-4 bg-muted/10 space-y-3">
+              <div>
+                <div className="font-medium">Pilih Vendor Final</div>
+                <div className="text-sm text-muted-foreground">
+                  Vendor final ditentukan WO berdasarkan paket, kategori, dan availability tanggal acara.
+                </div>
+              </div>
+
+              {kategoriRows.length === 0 ? (
+                <div className="text-sm text-muted-foreground">Paket belum dikonfigurasi vendor per kategori.</div>
+              ) : loadingAvail ? (
+                <div className="text-sm text-muted-foreground">Memuat vendor available...</div>
+              ) : (
+                <div className="space-y-3">
+                  {kategoriRows.map((row) => {
+                    const kategoriId = String(row.kategoriVendorId);
+                    const allowedIds = new Set((row.vendorIds || []).map(String));
+                    const avail = (availableByKategori[kategoriId] || []).filter((v: any) => allowedIds.has(String(v._id)));
+                    const kategoriName =
+                      kategoriOptions.find((x) => String(x._id) === String(kategoriId))?.nama_kategori || "—";
+                    return (
+                      <div key={kategoriId} className="rounded-lg border border-border p-4 space-y-2 bg-background">
+                        <div className="font-medium">{kategoriName}</div>
+                        <div className="max-h-44 overflow-auto rounded-md border border-border p-3 space-y-2">
+                          {avail.length === 0 ? (
+                            <div className="text-sm text-muted-foreground">Tidak ada vendor available.</div>
+                          ) : (
+                            avail.map((v: any) => {
+                              const id = String(v._id);
+                              const checked = selectedVendorIds.includes(id);
+                              return (
+                                <label key={id} className="flex items-center gap-3 text-sm">
+                                  <Checkbox
+                                    checked={checked}
+                                    onCheckedChange={(val) => {
+                                      const next = Boolean(val);
+                                      setSelectedVendorIds((ids) =>
+                                        next ? Array.from(new Set([...ids, id])) : ids.filter((x) => x !== id)
+                                      );
+                                    }}
+                                  />
+                                  <span className="flex-1 min-w-0">
+                                    <span className="font-medium">{v.nama_vendor}</span>{" "}
+                                    <span className="text-muted-foreground">· {v.kategori_vendor_nama || v.kategori_vendor_id?.nama_kategori || "—"}</span>
+                                  </span>
+                                </label>
+                              );
+                            })
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              <div className="flex items-center justify-end gap-2">
+                <Button
+                  variant="outline"
+                  onClick={async () => {
+                    try {
+                      await store.updateEventBooking(booking.id, {
+                        clientId: booking.clientId,
+                        packageId: booking.packageId,
+                        eventDate: booking.eventDate,
+                        venue: booking.venue,
+                        adatId: booking.adatId,
+                        vendorSelectedIds: selectedVendorIds,
+                      });
+                      toast.success("Vendor final tersimpan");
+                    } catch (err: any) {
+                      toast.error(err?.message || "Gagal menyimpan vendor final");
+                    }
+                  }}
+                >
+                  Simpan Vendor Final
+                </Button>
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-border p-4 bg-muted/10 space-y-3">
+              <div>
+                <div className="font-medium">Review Harga</div>
+                <div className="text-sm text-muted-foreground">
+                  Harga paket di master adalah estimasi “mulai dari”. Harga final wajib direview WO sebelum approval.
+                </div>
+              </div>
+
+              <div className="grid sm:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label>Harga Paket (Estimasi)</Label>
+                  <div className="h-10 rounded-md border border-border px-3 flex items-center text-sm">
+                    {formatIDR(Number(booking.hargaPaketEstimasi || booking.packageSnapshot?.price || pkg?.price || 0))}
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Harga Paket Final</Label>
+                  <RupiahInput value={Number(pricing.hargaPaketFinal) || 0} onValueChange={(v) => setPricing((p: any) => ({ ...p, hargaPaketFinal: v }))} placeholder="Rp" />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="text-sm font-medium">Add-ons</div>
+                {pricing.addons.length === 0 ? (
+                  <div className="text-sm text-muted-foreground">Tidak ada add-ons dari client.</div>
+                ) : (
+                  <div className="rounded-lg border border-border overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead className="bg-muted/50">
+                          <tr>
+                            <th className="text-left px-3 py-2 font-medium">Add-on</th>
+                            <th className="text-right px-3 py-2 font-medium w-[110px]">Qty</th>
+                            <th className="text-right px-3 py-2 font-medium w-[170px]">Harga Default</th>
+                            <th className="text-right px-3 py-2 font-medium w-[170px]">Harga Final</th>
+                            <th className="text-right px-3 py-2 font-medium w-[170px]">Subtotal</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border">
+                          {pricing.addons.map((a: any, idx: number) => {
+                            const qty = Number(a.qty) || 0;
+                            const hargaDefault = Number(a.harga_satuan_default) || 0;
+                            const hargaFinal = Number(a.harga_satuan_final) || 0;
+                            const subtotal = qty * hargaFinal;
+                            return (
+                              <tr key={String(a.addonId || idx)}>
+                                <td className="px-3 py-2">
+                                  <div className="font-medium">{a.nama_addon || "—"}</div>
+                                  <div className="text-xs text-muted-foreground">{a.kategori_addon || "—"}</div>
+                                </td>
+                                <td className="px-3 py-2 text-right">
+                                  <Input
+                                    type="number"
+                                    min={0}
+                                    value={qty || ""}
+                                    onChange={(e) => {
+                                      const nextQty = Math.max(0, Math.floor(Number(e.target.value || 0)));
+                                      setPricing((p: any) => ({
+                                        ...p,
+                                        addons: p.addons.map((x: any, i: number) => (i === idx ? { ...x, qty: nextQty } : x)),
+                                      }));
+                                    }}
+                                  />
+                                </td>
+                                <td className="px-3 py-2 text-right">{formatIDR(hargaDefault)}</td>
+                                <td className="px-3 py-2 text-right">
+                                  <RupiahInput
+                                    value={hargaFinal}
+                                    onValueChange={(v) =>
+                                      setPricing((p: any) => ({
+                                        ...p,
+                                        addons: p.addons.map((x: any, i: number) => (i === idx ? { ...x, harga_satuan_final: v } : x)),
+                                      }))
+                                    }
+                                    placeholder="Rp"
+                                  />
+                                </td>
+                                <td className="px-3 py-2 text-right font-medium text-primary">{formatIDR(subtotal)}</td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="grid sm:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label>Biaya Tambahan</Label>
+                  <RupiahInput value={Number(pricing.biayaTambahan) || 0} onValueChange={(v) => setPricing((p: any) => ({ ...p, biayaTambahan: v }))} placeholder="Rp" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Diskon</Label>
+                  <RupiahInput value={Number(pricing.diskon) || 0} onValueChange={(v) => setPricing((p: any) => ({ ...p, diskon: v }))} placeholder="Rp" />
+                </div>
+              </div>
+
+              {(() => {
+                const addonsFinal = (pricing.addons || []).reduce((s: number, a: any) => s + (Number(a.qty) || 0) * (Number(a.harga_satuan_final) || 0), 0);
+                const hargaFinalBooking = (Number(pricing.hargaPaketFinal) || 0) + addonsFinal + (Number(pricing.biayaTambahan) || 0) - (Number(pricing.diskon) || 0);
+                return (
+                  <div className="rounded-lg border border-border p-3 text-sm space-y-1 bg-background">
+                    <div className="flex justify-between"><span className="text-muted-foreground">Total Add-ons Final</span><span className="font-medium">{formatIDR(addonsFinal)}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Harga Final Booking</span><span className="font-medium text-primary">{formatIDR(hargaFinalBooking)}</span></div>
+                  </div>
+                );
+              })()}
+
+              <div className="flex items-center justify-end gap-2">
+                <Button
+                  variant="outline"
+                  disabled={pricingSaving}
+                  onClick={async () => {
+                    try {
+                      setPricingSaving(true);
+                      await store.updateBookingPricing(booking.id, {
+                        harga_paket_final: Number(pricing.hargaPaketFinal) || 0,
+                        biaya_tambahan: Number(pricing.biayaTambahan) || 0,
+                        diskon: Number(pricing.diskon) || 0,
+                        addons: (pricing.addons || []).map((a: any) => ({
+                          addonId: a.addonId,
+                          nama_addon: a.nama_addon,
+                          kategori_addon: a.kategori_addon,
+                          deskripsi: a.deskripsi,
+                          satuan: a.satuan,
+                          qty: Number(a.qty) || 0,
+                          harga_satuan_default: Number(a.harga_satuan_default) || 0,
+                          harga_satuan_final: Number(a.harga_satuan_final) || 0,
+                        })),
+                      });
+                      toast.success("Review harga tersimpan");
+                    } catch (err: any) {
+                      toast.error(err?.message || "Gagal menyimpan review harga");
+                    } finally {
+                      setPricingSaving(false);
+                    }
+                  }}
+                >
+                  {pricingSaving ? "Menyimpan..." : "Simpan Review Harga"}
+                </Button>
+              </div>
+            </div>
+
+            {(booking.statusBooking || "menunggu_review") === "menunggu_review" ? (
               <div className="rounded-lg border border-border p-4 bg-muted/10 space-y-3">
                 <div>
                   <div className="font-medium">Approval Booking</div>
                   <div className="text-sm text-muted-foreground">Approve cukup dari detail project ini (menu Review Booking tidak diperlukan).</div>
                 </div>
-
-                {kategoriRows.length === 0 ? (
-                  <div className="text-sm text-muted-foreground">Paket belum dikonfigurasi vendor per kategori.</div>
-                ) : loadingAvail ? (
-                  <div className="text-sm text-muted-foreground">Memuat vendor available...</div>
-                ) : (
-                  <div className="space-y-3">
-                    {kategoriRows.map((row) => {
-                      const kategoriId = String(row.kategoriVendorId);
-                      const allowedIds = new Set((row.vendorIds || []).map(String));
-                      const avail = (availableByKategori[kategoriId] || []).filter((v: any) => allowedIds.has(String(v._id)));
-                      const kategoriName =
-                        kategoriOptions.find((x) => String(x._id) === String(kategoriId))?.nama_kategori || "—";
-                      return (
-                        <div key={kategoriId} className="rounded-lg border border-border p-4 space-y-2 bg-background">
-                          <div className="font-medium">{kategoriName}</div>
-                          <div className="max-h-44 overflow-auto rounded-md border border-border p-3 space-y-2">
-                            {avail.length === 0 ? (
-                              <div className="text-sm text-muted-foreground">Tidak ada vendor available.</div>
-                            ) : (
-                              avail.map((v: any) => {
-                                const id = String(v._id);
-                                const checked = selectedVendorIds.includes(id);
-                                return (
-                                  <label key={id} className="flex items-center gap-3 text-sm">
-                                    <Checkbox
-                                      checked={checked}
-                                      onCheckedChange={(val) => {
-                                        const next = Boolean(val);
-                                        setSelectedVendorIds((ids) =>
-                                          next ? Array.from(new Set([...ids, id])) : ids.filter((x) => x !== id)
-                                        );
-                                      }}
-                                    />
-                                    <span className="flex-1 min-w-0">
-                                      <span className="font-medium">{v.nama_vendor}</span>{" "}
-                                      <span className="text-muted-foreground">· {v.kategori_vendor_nama || v.kategori_vendor_id?.nama_kategori || "—"}</span>
-                                    </span>
-                                  </label>
-                                );
-                              })
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
 
                 <div className="flex items-center justify-end gap-2">
                   <Button
@@ -969,10 +1248,9 @@ export default function ProjectDetail() {
                           eventDate: booking.eventDate,
                           venue: booking.venue,
                           adatId: booking.adatId,
-                          eventStatus: "batal",
-                          reviewStatus: "rejected",
                           vendorSelectedIds: [],
                         });
+                        await store.updateBookingStatus(booking.id, "rejected");
                         toast.success("Booking ditolak");
                       } catch (err: any) {
                         toast.error(err?.message || "Gagal menolak booking");
@@ -991,18 +1269,37 @@ export default function ProjectDetail() {
                         toast.error("Pilih minimal 1 vendor final sebelum approve.");
                         return;
                       }
+                      if (!Number(pricing.hargaPaketFinal) || Number(pricing.hargaPaketFinal) <= 0) {
+                        toast.error("Harga paket final wajib diisi sebelum approve.");
+                        return;
+                      }
                       try {
                         setApproving(true);
+                        await store.updateBookingPricing(booking.id, {
+                          harga_paket_final: Number(pricing.hargaPaketFinal) || 0,
+                          biaya_tambahan: Number(pricing.biayaTambahan) || 0,
+                          diskon: Number(pricing.diskon) || 0,
+                          addons: (pricing.addons || []).map((a: any) => ({
+                            addonId: a.addonId,
+                            nama_addon: a.nama_addon,
+                            kategori_addon: a.kategori_addon,
+                            deskripsi: a.deskripsi,
+                            satuan: a.satuan,
+                            qty: Number(a.qty) || 0,
+                            harga_satuan_default: Number(a.harga_satuan_default) || 0,
+                            harga_satuan_final: Number(a.harga_satuan_final) || 0,
+                          })),
+                        });
                         await store.updateEventBooking(booking.id, {
                           clientId: booking.clientId,
                           packageId: booking.packageId,
                           eventDate: booking.eventDate,
                           venue: booking.venue,
                           adatId: booking.adatId,
-                          eventStatus: "aktif",
-                          reviewStatus: "approved",
                           vendorSelectedIds: selectedVendorIds,
                         });
+                        await store.updateBookingStatus(booking.id, "approved");
+                        await store.refreshTimelineEvent();
                         toast.success("Booking di-approve");
                       } catch (err: any) {
                         toast.error(err?.message || "Gagal approve booking");

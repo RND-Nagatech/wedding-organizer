@@ -10,6 +10,7 @@ import TmKatalogMakeup from "../models/tm_katalog_makeup.js";
 import TtTimelineClient from "../models/tt_timeline_client.js";
 import TtTimelineEvent from "../models/tt_timeline_event.js";
 import { generateDailyCode } from "../utils/code.js";
+import TmAddon from "../models/tm_addon.js";
 
 const router = express.Router();
 
@@ -22,6 +23,44 @@ router.get("/", async (req, res) => {
     res.status(500).json({ pesan: "Gagal mengambil data booking" });
   }
 });
+
+function deriveStatusBooking({ status_booking, status_review, status_event }) {
+  if (status_booking) return String(status_booking);
+  if (String(status_event || "") === "aktif") return "ongoing";
+  if (String(status_event || "") === "selesai") return "completed";
+  if (String(status_event || "") === "batal") return "cancelled";
+  if (String(status_review || "") === "approved") return "approved";
+  if (String(status_review || "") === "rejected") return "rejected";
+  return "menunggu_review";
+}
+
+function mapStatusBookingToLegacy(status_booking) {
+  const s = String(status_booking || "");
+  if (s === "draft") return { status_review: "menunggu_review", status_event: "draft" };
+  if (s === "menunggu_review") return { status_review: "menunggu_review", status_event: "draft" };
+  // approved berarti booking sudah disetujui dan vendor harus di-lock (legacy: aktif)
+  if (s === "approved") return { status_review: "approved", status_event: "aktif" };
+  if (s === "rejected") return { status_review: "rejected", status_event: "batal" };
+  if (s === "ongoing") return { status_review: "approved", status_event: "aktif" };
+  if (s === "completed") return { status_review: "approved", status_event: "selesai" };
+  if (s === "cancelled") return { status_review: "rejected", status_event: "batal" };
+  return null;
+}
+
+function normalizeMoney(v) {
+  const n = Number(v || 0);
+  if (Number.isNaN(n)) return 0;
+  return n;
+}
+
+function computePricing({ paketHargaEstimasi, paketHargaFinal, addons, biayaTambahan, diskon }) {
+  const safeAddons = Array.isArray(addons) ? addons : [];
+  const totalAddonsEstimasi = safeAddons.reduce((s, a) => s + normalizeMoney(a.subtotal_default), 0);
+  const totalAddonsFinal = safeAddons.reduce((s, a) => s + normalizeMoney(a.subtotal_final), 0);
+  const totalEstimasi = normalizeMoney(paketHargaEstimasi) + totalAddonsEstimasi + normalizeMoney(biayaTambahan) - normalizeMoney(diskon);
+  const hargaFinalBooking = normalizeMoney(paketHargaFinal) + totalAddonsFinal + normalizeMoney(biayaTambahan) - normalizeMoney(diskon);
+  return { totalAddonsEstimasi, totalAddonsFinal, totalEstimasi, hargaFinalBooking };
+}
 
 function vendorStatusFromBookingStatus(status) {
   if (status === "Confirmed") return "booked";
@@ -88,12 +127,14 @@ router.post("/", async (req, res) => {
       client_id,
       paket_id,
       lokasi_acara,
+      status_booking,
       status_event,
       status_review,
       adat_id,
       pic,
       catatan,
       preferensi_katalog,
+      addons,
 
       // Backward compat payload
       id_klien = client_id,
@@ -118,6 +159,35 @@ router.post("/", async (req, res) => {
 
     const paket = await TmPackage.findById(String(id_paket));
     if (!paket) return res.status(400).json({ pesan: "Paket tidak valid" });
+
+    // Add-ons snapshot (default)
+    const picked = Array.isArray(addons) ? addons : [];
+    const pickedIds = picked.map((a) => String(a.addon_id || a._id || a.id || "")).filter(Boolean);
+    const addonDocs = pickedIds.length ? await TmAddon.find({ _id: { $in: pickedIds } }) : [];
+    const addonMap = new Map(addonDocs.map((d) => [String(d._id), d]));
+    const bookingAddons = picked
+      .map((raw) => {
+        const id = String(raw.addon_id || raw._id || raw.id || "");
+        const doc = addonMap.get(id);
+        if (!doc) return null;
+        const qty = Math.max(0, Math.floor(Number(raw.qty || 0)));
+        if (!qty) return null;
+        const hargaDefault = normalizeMoney(doc.harga_satuan_default);
+        const subtotalDefault = qty * hargaDefault;
+        return {
+          addon_id: doc._id,
+          nama_addon: doc.nama_addon,
+          kategori_addon: doc.kategori_addon,
+          deskripsi: doc.deskripsi,
+          satuan: doc.satuan,
+          qty,
+          harga_satuan_default: hargaDefault,
+          harga_satuan_final: hargaDefault,
+          subtotal_default: subtotalDefault,
+          subtotal_final: subtotalDefault,
+        };
+      })
+      .filter(Boolean);
 
     const allowedVendorIds = (paket.vendor_ids || []).map((id) => String(id));
     const selectedVendorIds = (Array.isArray(vendor_dipilih_ids) ? vendor_dipilih_ids : [])
@@ -173,8 +243,9 @@ router.post("/", async (req, res) => {
       paket_id: String(id_paket),
       adat_id: adat_id || undefined,
       pic,
-      status_event: status_event || "draft",
-      status_review: status_review || "menunggu_review",
+      status_booking: deriveStatusBooking({ status_booking, status_review, status_event }),
+      status_event: (mapStatusBookingToLegacy(deriveStatusBooking({ status_booking, status_review, status_event }))?.status_event) || status_event || "draft",
+      status_review: (mapStatusBookingToLegacy(deriveStatusBooking({ status_booking, status_review, status_event }))?.status_review) || status_review || "menunggu_review",
       catatan,
       preferensi_katalog: {
         baju_id: bajuId || undefined,
@@ -197,6 +268,39 @@ router.post("/", async (req, res) => {
         fitur: paket.fitur,
         vendor_ids: allowedVendorIds,
       },
+      addons: bookingAddons,
+      harga_paket_estimasi: normalizeMoney(paket.harga),
+      harga_paket_final: normalizeMoney(paket.harga),
+      biaya_tambahan: 0,
+      diskon: 0,
+      total_addons_estimasi: computePricing({
+        paketHargaEstimasi: normalizeMoney(paket.harga),
+        paketHargaFinal: normalizeMoney(paket.harga),
+        addons: bookingAddons,
+        biayaTambahan: 0,
+        diskon: 0,
+      }).totalAddonsEstimasi,
+      total_addons_final: computePricing({
+        paketHargaEstimasi: normalizeMoney(paket.harga),
+        paketHargaFinal: normalizeMoney(paket.harga),
+        addons: bookingAddons,
+        biayaTambahan: 0,
+        diskon: 0,
+      }).totalAddonsFinal,
+      total_estimasi: computePricing({
+        paketHargaEstimasi: normalizeMoney(paket.harga),
+        paketHargaFinal: normalizeMoney(paket.harga),
+        addons: bookingAddons,
+        biayaTambahan: 0,
+        diskon: 0,
+      }).totalEstimasi,
+      harga_final_booking: computePricing({
+        paketHargaEstimasi: normalizeMoney(paket.harga),
+        paketHargaFinal: normalizeMoney(paket.harga),
+        addons: bookingAddons,
+        biayaTambahan: 0,
+        diskon: 0,
+      }).hargaFinalBooking,
       tanggal_acara: String(tanggal_acara),
       lokasi,
       tamu,
@@ -243,11 +347,13 @@ router.put("/:id", async (req, res) => {
     const booking = await TtBooking.findById(req.params.id);
     if (!booking) return res.status(404).json({ pesan: "Booking tidak ditemukan" });
     const prevReviewStatus = booking.status_review;
+    const prevStatusBooking = booking.status_booking;
 
     const {
       // Tahap 5
       tanggal_acara,
       lokasi_acara,
+      status_booking,
       status_event,
       status_review,
       adat_id,
@@ -256,6 +362,10 @@ router.put("/:id", async (req, res) => {
       client_id,
       paket_id,
       preferensi_katalog,
+      addons,
+      harga_paket_final,
+      biaya_tambahan,
+      diskon,
 
       // Backward compat
       status,
@@ -282,11 +392,74 @@ router.put("/:id", async (req, res) => {
 
     if (typeof tamu !== "undefined") booking.tamu = tamu;
     if (typeof status !== "undefined") booking.status = status;
+    if (typeof status_booking !== "undefined") {
+      const next = deriveStatusBooking({ status_booking, status_review: booking.status_review, status_event: booking.status_event });
+      booking.status_booking = next;
+      const legacy = mapStatusBookingToLegacy(next);
+      if (legacy?.status_event) booking.status_event = legacy.status_event;
+      if (legacy?.status_review) booking.status_review = legacy.status_review;
+    }
     if (typeof status_event !== "undefined") booking.status_event = status_event;
     if (typeof status_review !== "undefined") booking.status_review = status_review;
+    // keep status_booking in sync when legacy fields are updated directly
+    if (typeof status_event !== "undefined" || typeof status_review !== "undefined") {
+      booking.status_booking = deriveStatusBooking({
+        status_review: booking.status_review,
+        status_event: booking.status_event,
+      });
+    }
     if (typeof adat_id !== "undefined") booking.adat_id = adat_id || undefined;
     if (typeof pic !== "undefined") booking.pic = pic;
     if (typeof catatan !== "undefined") booking.catatan = catatan;
+
+    // pricing updates (WO)
+    if (
+      typeof addons !== "undefined" ||
+      typeof harga_paket_final !== "undefined" ||
+      typeof biaya_tambahan !== "undefined" ||
+      typeof diskon !== "undefined"
+    ) {
+      const nextAddons = typeof addons !== "undefined" ? (Array.isArray(addons) ? addons : []) : booking.addons || [];
+      const normalizedAddons = (nextAddons || [])
+        .map((a) => {
+          const qty = Math.max(0, Math.floor(Number(a.qty || 0)));
+          const hargaDefault = normalizeMoney(a.harga_satuan_default);
+          const hargaFinal = normalizeMoney(typeof a.harga_satuan_final !== "undefined" ? a.harga_satuan_final : a.harga_satuan_default);
+          const subtotalDefault = normalizeMoney(typeof a.subtotal_default !== "undefined" ? a.subtotal_default : qty * hargaDefault);
+          const subtotalFinal = qty * hargaFinal;
+          return {
+            addon_id: a.addon_id || a._id || a.id,
+            nama_addon: a.nama_addon,
+            kategori_addon: a.kategori_addon,
+            deskripsi: a.deskripsi,
+            satuan: a.satuan,
+            qty,
+            harga_satuan_default: hargaDefault,
+            harga_satuan_final: hargaFinal,
+            subtotal_default: subtotalDefault,
+            subtotal_final: subtotalFinal,
+          };
+        })
+        .filter((a) => a.qty > 0);
+
+      booking.addons = normalizedAddons;
+      booking.harga_paket_estimasi = normalizeMoney(booking.paket_snapshot?.harga) || booking.harga_paket_estimasi || 0;
+      if (typeof harga_paket_final !== "undefined") booking.harga_paket_final = normalizeMoney(harga_paket_final);
+      if (typeof biaya_tambahan !== "undefined") booking.biaya_tambahan = normalizeMoney(biaya_tambahan);
+      if (typeof diskon !== "undefined") booking.diskon = normalizeMoney(diskon);
+
+      const computed = computePricing({
+        paketHargaEstimasi: booking.harga_paket_estimasi,
+        paketHargaFinal: booking.harga_paket_final || booking.harga_paket_estimasi,
+        addons: normalizedAddons,
+        biayaTambahan: booking.biaya_tambahan,
+        diskon: booking.diskon,
+      });
+      booking.total_addons_estimasi = computed.totalAddonsEstimasi;
+      booking.total_addons_final = computed.totalAddonsFinal;
+      booking.total_estimasi = computed.totalEstimasi;
+      booking.harga_final_booking = computed.hargaFinalBooking;
+    }
     if (typeof preferensi_katalog !== "undefined") {
       const pref = preferensi_katalog || {};
       const bajuId = pref?.baju_id ? String(pref.baju_id) : null;
@@ -353,13 +526,13 @@ router.put("/:id", async (req, res) => {
 
     await booking.save();
 
-    // On approval: generate default timelines (client + internal) if not exists
-    if (
-      typeof status_review !== "undefined" &&
+    const isApprovalTransition =
       prevReviewStatus !== "approved" &&
       booking.status_review === "approved" &&
-      booking.kode_booking
-    ) {
+      booking.kode_booking;
+
+    // On approval: generate default timelines (client + internal) if not exists
+    if (isApprovalTransition) {
       const kode = String(booking.kode_booking);
       const clientCount = await TtTimelineClient.countDocuments({ kode_booking: kode });
       if (clientCount === 0) {
@@ -377,16 +550,57 @@ router.put("/:id", async (req, res) => {
 
       const internalCount = await TtTimelineEvent.countDocuments({ kode_booking: kode });
       if (internalCount === 0) {
-        const eventDate = String(booking.tanggal_acara);
         await TtTimelineEvent.insertMany([
-          { kode_booking: kode, nama_tugas: "cek availability vendor", kategori_tugas: "vendor", deadline: addDaysISO(eventDate, -30) },
-          { kode_booking: kode, nama_tugas: "hubungi vendor", kategori_tugas: "vendor", deadline: addDaysISO(eventDate, -28) },
-          { kode_booking: kode, nama_tugas: "finalisasi dekorasi", kategori_tugas: "operasional", deadline: addDaysISO(eventDate, -14) },
-          { kode_booking: kode, nama_tugas: "fitting baju", kategori_tugas: "operasional", deadline: addDaysISO(eventDate, -10) },
-          { kode_booking: kode, nama_tugas: "assign crew", kategori_tugas: "crew", deadline: addDaysISO(eventDate, -7) },
-          { kode_booking: kode, nama_tugas: "checklist barang", kategori_tugas: "barang", deadline: addDaysISO(eventDate, -2) },
-          { kode_booking: kode, nama_tugas: "rundown final", kategori_tugas: "rundown", deadline: addDaysISO(eventDate, -1) },
+          { kode_booking: kode, nama_tugas: "cek availability vendor", kategori_tugas: "vendor" },
+          { kode_booking: kode, nama_tugas: "hubungi vendor", kategori_tugas: "vendor" },
+          { kode_booking: kode, nama_tugas: "finalisasi dekorasi", kategori_tugas: "operasional" },
+          { kode_booking: kode, nama_tugas: "fitting baju", kategori_tugas: "operasional" },
+          { kode_booking: kode, nama_tugas: "assign crew", kategori_tugas: "crew" },
+          { kode_booking: kode, nama_tugas: "checklist barang", kategori_tugas: "barang" },
+          { kode_booking: kode, nama_tugas: "rundown final", kategori_tugas: "rundown" },
         ]);
+      }
+    }
+
+    // Keep vendor booking status in sync with status_booking transition (even when only status_booking is sent)
+    // - approved/ongoing => booked
+    // - completed => selesai
+    // - rejected/cancelled => batal
+    if (booking.kode_booking && prevStatusBooking !== booking.status_booking) {
+      await TtVendorBooking.updateMany(
+        { kode_booking: String(booking.kode_booking) },
+        { $set: { status: vendorStatusFromEventStatus(booking.status_event), tanggal_acara: String(booking.tanggal_acara) } }
+      );
+    }
+
+    // On approval (or already approved/ongoing): ensure selected vendors are locked as booked in tt_vendor_booking
+    if (booking.kode_booking && ["approved", "ongoing"].includes(String(booking.status_booking || ""))) {
+      const picked = Array.isArray(booking.vendor_dipilih_ids) ? booking.vendor_dipilih_ids.map(String).filter(Boolean) : [];
+      if (picked.length > 0) {
+        const kode = String(booking.kode_booking);
+        const existing = await TtVendorBooking.find({
+          kode_booking: kode,
+          vendor_id: { $in: picked },
+          tanggal_acara: String(booking.tanggal_acara),
+        }).select("vendor_id");
+        const existingSet = new Set(existing.map((e) => String(e.vendor_id)));
+        const missingIds = picked.filter((vId) => !existingSet.has(String(vId)));
+        if (missingIds.length > 0) {
+          const vendorDocs = await TmVendor.find({ _id: { $in: missingIds } });
+          await TtVendorBooking.insertMany(
+            vendorDocs.map((v) => ({
+              kode_booking: kode,
+              vendor_id: v._id,
+              kategori_vendor_id: v.kategori_vendor_id || undefined,
+              tanggal_acara: String(booking.tanggal_acara),
+              status: "booked",
+            }))
+          );
+        }
+        await TtVendorBooking.updateMany(
+          { kode_booking: kode, vendor_id: { $in: picked }, tanggal_acara: String(booking.tanggal_acara) },
+          { $set: { status: "booked" } }
+        );
       }
     }
 

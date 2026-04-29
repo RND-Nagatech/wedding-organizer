@@ -198,7 +198,7 @@ const Bookings = () => {
     const namaClient = (b.clientName || (client ? `${client.name} & ${client.partner}` : "")).toLowerCase();
     const tanggalAcara = b.eventDate ? formatDate(b.eventDate).toLowerCase() : "";
     const paket = (b.packageSnapshot?.name || pkg?.name || "").toLowerCase();
-    const status = (b.eventStatus || "draft").toLowerCase();
+    const status = (b.statusBooking || "menunggu_review").toLowerCase();
     const q = search.toLowerCase();
     return (
       kodeBooking.includes(q) ||
@@ -273,7 +273,7 @@ const Bookings = () => {
                     <td className="px-5 py-4 text-primary font-medium">{pkgName}</td>
                     <td className="px-5 py-4">{adatName}</td>
                     <td className="px-5 py-4">{b.pic || "—"}</td>
-                    <td className="px-5 py-4"><StatusBadge status={b.eventStatus || "draft"} /></td>
+                    <td className="px-5 py-4"><StatusBadge status={b.statusBooking || "menunggu_review"} /></td>
                     <td className="px-5 py-4 text-right">
                       <div className="inline-flex gap-2">
                         <BookingDetailDialog

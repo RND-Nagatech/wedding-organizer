@@ -13,6 +13,9 @@ const STATUS_LABELS: Record<string, string> = {
   menunggu_review: "Menunggu Review",
   approved: "Approved",
   rejected: "Rejected",
+  ongoing: "Ongoing",
+  completed: "Completed",
+  cancelled: "Cancelled",
 
   belum_bayar: "Belum Bayar",
   "belum bayar": "Belum Bayar",

@@ -12,7 +12,7 @@ import { statusLabel } from "@/lib/labels";
 
 function pickDefaultBookingId(bookings: any[]) {
   const rows = bookings
-    .filter((b) => (b.eventStatus || "draft") !== "batal")
+    .filter((b) => (b.statusBooking || "menunggu_review") !== "cancelled")
     .sort((a, b) => String(b.eventDate || "").localeCompare(String(a.eventDate || "")));
   return rows[0]?.id || "";
 }
@@ -38,7 +38,7 @@ export default function ClientPayments() {
   const client = clients.find((c) => c.id === booking?.clientId);
   const pkg = packages.find((p) => p.id === booking?.packageId);
 
-  const totalTagihan = booking?.packageSnapshot?.price ?? pkg?.price ?? 0;
+  const totalTagihan = Number(booking?.hargaFinalBooking) || Number(booking?.packageSnapshot?.price) || Number(pkg?.price) || 0;
   const rows = useMemo(() => {
     if (!bookingCode) return [];
     return payments
@@ -74,7 +74,7 @@ export default function ClientPayments() {
           <div className="space-y-1.5">
             <Label>Status Booking</Label>
             <div className="h-10 rounded-md border border-border px-3 flex items-center">
-              <span className="text-sm font-medium">{statusLabel(booking?.reviewStatus || "menunggu_review")}</span>
+              <span className="text-sm font-medium">{statusLabel(booking?.statusBooking || "menunggu_review")}</span>
             </div>
           </div>
         </div>

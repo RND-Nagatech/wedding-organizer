@@ -291,10 +291,9 @@ function ReviewDialog({ bookingId }: { bookingId: string }) {
                   eventDate: booking.eventDate,
                   venue: booking.venue,
                   adatId: booking.adatId,
-                  eventStatus: "batal",
-                  reviewStatus: "rejected",
                   vendorSelectedIds: [],
                 });
+                await store.updateBookingStatus(booking.id, "rejected");
                 toast.success("Booking ditolak");
                 setOpen(false);
               } catch (err: any) {
@@ -327,10 +326,9 @@ function ReviewDialog({ bookingId }: { bookingId: string }) {
                   eventDate: booking.eventDate,
                   venue: booking.venue,
                   adatId: booking.adatId,
-                  eventStatus: "aktif",
-                  reviewStatus: "approved",
                   vendorSelectedIds: selectedVendorIds,
                 });
+                await store.updateBookingStatus(booking.id, "approved");
                 toast.success("Booking di-approve dan vendor final tersimpan");
                 setOpen(false);
               } catch (err: any) {
@@ -352,7 +350,7 @@ export default function BookingReview() {
   const bookings = useBookings();
   const packages = usePackages();
 
-  const rows = useMemo(() => bookings.filter((b) => (b.reviewStatus || "menunggu_review") === "menunggu_review"), [bookings]);
+  const rows = useMemo(() => bookings.filter((b) => (b.statusBooking || "menunggu_review") === "menunggu_review"), [bookings]);
 
   return (
     <>
@@ -367,7 +365,7 @@ export default function BookingReview() {
                 <TableHead>Client</TableHead>
                 <TableHead>Tanggal</TableHead>
                 <TableHead>Paket</TableHead>
-                <TableHead>Status Review</TableHead>
+                <TableHead>Status Booking</TableHead>
                 <TableHead className="text-right w-[120px]">Aksi</TableHead>
               </TableRow>
             </TableHeader>
@@ -381,7 +379,7 @@ export default function BookingReview() {
                     <TableCell>{b.clientName || "—"}</TableCell>
                     <TableCell>{formatDate(b.eventDate)}</TableCell>
                     <TableCell className="text-primary font-medium">{pkgName}</TableCell>
-                    <TableCell>{statusLabel(String(b.reviewStatus || "menunggu_review"))}</TableCell>
+                    <TableCell>{statusLabel(String(b.statusBooking || "menunggu_review"))}</TableCell>
                     <TableCell className="text-right">
                       <ReviewDialog bookingId={b.id} />
                     </TableCell>

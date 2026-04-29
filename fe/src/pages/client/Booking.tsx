@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { formatDate, formatIDR } from "@/lib/mockData";
 import { StatusBadge } from "@/components/StatusBadge";
 import { CalendarDays, MapPin, Users as UsersIcon, Heart, ExternalLink, BadgeCheck } from "lucide-react";
-import { store, useAdat, useBookings, useClients, useKatalogBaju, useKatalogDekorasi, useKatalogMakeup, usePackages } from "@/lib/dataStore";
+import { store, useAdat, useAddons, useBookings, useClients, useKatalogBaju, useKatalogDekorasi, useKatalogMakeup, usePackages } from "@/lib/dataStore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,6 +27,7 @@ const ClientBooking = () => {
   const bookings = useBookings();
   const packages = usePackages();
   const adat = useAdat();
+  const addons = useAddons();
   const katalogBaju = useKatalogBaju();
   const katalogDekorasi = useKatalogDekorasi();
   const katalogMakeup = useKatalogMakeup();
@@ -46,6 +47,7 @@ const ClientBooking = () => {
     bajuId: sentinelNone,
     dekorasiId: sentinelNone,
     makeupId: sentinelNone,
+    addonsQty: {} as Record<string, number>,
   });
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -125,6 +127,9 @@ const ClientBooking = () => {
 
               try {
                 setSaving(true);
+                const pickedAddons = Object.entries(form.addonsQty || {})
+                  .map(([addonId, qty]) => ({ addonId, qty: Math.max(0, Math.floor(Number(qty || 0))) }))
+                  .filter((x) => x.addonId && x.qty > 0);
                 await store.addBooking({
                   clientId: client.id,
                   packageId: client.packageId,
@@ -137,6 +142,7 @@ const ClientBooking = () => {
                   adatId: form.adatId === sentinelNone ? undefined : form.adatId,
                   note: form.note || undefined,
                   vendorSelectedIds: [],
+                  addons: pickedAddons,
                   preferensiKatalog: {
                     bajuId: form.bajuId === sentinelNone ? undefined : form.bajuId,
                     dekorasiId: form.dekorasiId === sentinelNone ? undefined : form.dekorasiId,
@@ -168,6 +174,54 @@ const ClientBooking = () => {
               <Label>Lokasi Acara</Label>
               <Input value={form.venue} onChange={(e) => setForm((f) => ({ ...f, venue: e.target.value }))} placeholder="Gedung/Alamat acara" />
               {errors.venue ? <div className="text-xs text-destructive">{errors.venue}</div> : null}
+            </div>
+
+            <div className="space-y-2">
+              <Label>Add-ons (Opsional)</Label>
+              <div className="rounded-lg border border-border overflow-hidden">
+                <div className="px-3 py-2 bg-muted/30 text-xs text-muted-foreground">
+                  Harga paket adalah estimasi “mulai dari”. Harga final akan direview WO sebelum approval.
+                </div>
+                <div className="p-3 space-y-2">
+                  {addons.filter((a) => a.status === "aktif").length === 0 ? (
+                    <div className="text-sm text-muted-foreground">Belum ada master add-ons aktif.</div>
+                  ) : (
+                    addons
+                      .filter((a) => a.status === "aktif")
+                      .map((a) => {
+                        const qty = Number(form.addonsQty?.[a.id] || 0);
+                        return (
+                          <div key={a.id} className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center rounded-md border border-border px-3 py-2">
+                            <div className="sm:col-span-7 min-w-0">
+                              <div className="text-sm font-medium truncate">{a.nama_addon}</div>
+                              <div className="text-xs text-muted-foreground truncate">
+                                {a.kategori_addon ? `${a.kategori_addon} · ` : ""}Default: {formatIDR(a.harga_satuan_default || 0)}
+                              </div>
+                            </div>
+                            <div className="sm:col-span-3">
+                              <Input
+                                type="number"
+                                min={0}
+                                value={qty || ""}
+                                onChange={(e) => {
+                                  const nextQty = Math.max(0, Math.floor(Number(e.target.value || 0)));
+                                  setForm((f) => ({
+                                    ...f,
+                                    addonsQty: { ...(f.addonsQty || {}), [a.id]: nextQty },
+                                  }));
+                                }}
+                                placeholder="Qty"
+                              />
+                            </div>
+                            <div className="sm:col-span-2 text-right text-sm font-medium text-primary">
+                              {formatIDR((a.harga_satuan_default || 0) * (qty || 0))}
+                            </div>
+                          </div>
+                        );
+                      })
+                  )}
+                </div>
+              </div>
             </div>
 
             <div className="space-y-1.5">
@@ -282,7 +336,7 @@ const ClientBooking = () => {
     <>
       <PageHeader
         title="Booking Saya"
-        subtitle={`${(booking.code || booking.id).toUpperCase()} · ${statusLabel(booking.reviewStatus || "menunggu_review")}`}
+        subtitle={`${(booking.code || booking.id).toUpperCase()} · ${statusLabel(booking.statusBooking || "menunggu_review")}`}
         actions={
           <Button asChild variant="outline">
             <Link to="/client/references">Upload Referensi</Link>
@@ -297,9 +351,9 @@ const ClientBooking = () => {
             <h2 className="font-display text-3xl mt-1">{booking.clientName || client?.name} </h2>
           </div>
           <div className="flex items-center gap-2">
-            <StatusBadge status={booking.eventStatus || "draft"} />
+            <StatusBadge status={booking.statusBooking || "menunggu_review"} />
             <div className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1 text-xs bg-background">
-              <BadgeCheck className="w-3.5 h-3.5 text-primary" /> {statusLabel(booking.reviewStatus || "menunggu_review")}
+              <BadgeCheck className="w-3.5 h-3.5 text-primary" /> {statusLabel(booking.statusBooking || "menunggu_review")}
             </div>
           </div>
         </div>

@@ -17,7 +17,7 @@ const AdminDashboard = () => {
 
   const totalRevenue = invoices.reduce((s, i) => s + (i.paid || i.dibayar || 0), 0);
   const pendingApproval = bookings
-    .filter((b) => (b.reviewStatus || "menunggu_review") === "menunggu_review")
+    .filter((b) => (b.statusBooking || "menunggu_review") === "menunggu_review")
     .sort((a, b) => String(a.eventDate || "").localeCompare(String(b.eventDate || "")));
   const upcoming = bookings
     .filter((b) => new Date(b.eventDate) >= new Date())

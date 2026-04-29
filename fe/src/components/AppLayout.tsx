@@ -22,6 +22,7 @@ const adminNav: NavItem[] = [
       { to: "/admin/vendor-categories", label: "Kategori Vendor", icon: ListChecks },
       { to: "/admin/vendors", label: "Master Vendor", icon: Store, perm: "vendors" },
       { to: "/admin/packages", label: "Master Paket", icon: Package, perm: "packages" },
+      { to: "/admin/addons", label: "Master Add-ons", icon: Package },
       { to: "/admin/adat", label: "Adat / Konsep", icon: ListChecks },
       { to: "/admin/catalog-baju", label: "Katalog Baju", icon: Package },
       { to: "/admin/catalog-dekorasi", label: "Katalog Dekorasi", icon: Package },

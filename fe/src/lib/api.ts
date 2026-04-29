@@ -740,6 +740,40 @@ export async function ambilVendor() {
   return res.json();
 }
 
+// Master Add-ons (tm_addon)
+export async function ambilAddon(params?: { q?: string; status?: string; kategori_addon?: string }) {
+  const qs = params ? `?${new URLSearchParams(params as any).toString()}` : "";
+  const res = await fetch(`${API_BASE}/tm_addon${qs}`);
+  if (!res.ok) throw new Error("Gagal mengambil master add-ons");
+  return res.json();
+}
+
+export async function tambahAddon(data: any) {
+  const res = await fetch(`${API_BASE}/tm_addon`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error("Gagal menambah add-on");
+  return res.json();
+}
+
+export async function editAddon(id: string, data: any) {
+  const res = await fetch(`${API_BASE}/tm_addon/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error("Gagal mengedit add-on");
+  return res.json();
+}
+
+export async function hapusAddon(id: string) {
+  const res = await fetch(`${API_BASE}/tm_addon/${id}`, { method: "DELETE" });
+  if (!res.ok) throw new Error("Gagal menghapus add-on");
+  return res.json();
+}
+
 export async function tambahVendor(data: any) {
   const res = await fetch(`${API_BASE}/tm_vendor`, {
     method: "POST",

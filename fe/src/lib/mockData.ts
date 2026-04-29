@@ -80,6 +80,7 @@ export type Booking = {
   guests: number;
   adatId?: string;
   pic?: string;
+  statusBooking?: "draft" | "menunggu_review" | "approved" | "rejected" | "ongoing" | "completed" | "cancelled";
   eventStatus?: "draft" | "aktif" | "selesai" | "batal";
   reviewStatus?: "menunggu_review" | "approved" | "rejected";
   note?: string;
@@ -101,6 +102,23 @@ export type Booking = {
     features?: string[];
     vendorIds?: string[];
   };
+  addons?: {
+    addonId?: string;
+    nama_addon: string;
+    kategori_addon?: string;
+    deskripsi?: string;
+    satuan?: string;
+    qty: number;
+    harga_satuan_default: number;
+    harga_satuan_final?: number;
+    subtotal_default?: number;
+    subtotal_final?: number;
+  }[];
+  hargaPaketEstimasi?: number;
+  hargaPaketFinal?: number;
+  biayaTambahan?: number;
+  diskon?: number;
+  hargaFinalBooking?: number;
   status: "Pending" | "Confirmed" | "Done";
 };
 

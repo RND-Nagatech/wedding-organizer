@@ -69,6 +69,20 @@ import {
   hapusTimelineEvent,
 } from "./api";
 import { ambilKeuangan, tambahKeuangan, editKeuangan, hapusKeuangan } from "./api";
+import { ambilAddon, tambahAddon, editAddon, hapusAddon } from "./api";
+
+function deriveStatusBooking(input: { status_booking?: string; status_review?: string; status_event?: string }) {
+  const statusBooking = String(input.status_booking || "").trim();
+  if (statusBooking) return statusBooking;
+  const statusEvent = String(input.status_event || "");
+  const statusReview = String(input.status_review || "");
+  if (statusEvent === "aktif") return "ongoing";
+  if (statusEvent === "selesai") return "completed";
+  if (statusEvent === "batal") return "cancelled";
+  if (statusReview === "approved") return "approved";
+  if (statusReview === "rejected") return "rejected";
+  return "menunggu_review";
+}
 
 export type Payment = {
   id: string;
@@ -191,9 +205,9 @@ export type TimelineEventTask = {
   kode_booking: string;
   nama_tugas: string;
   kategori_tugas?: string;
-  deadline: string;
+  deadline?: string;
   pic?: string;
-  status: "belum_dikerjakan" | "proses" | "selesai" | "terlambat";
+  status: "belum_dikerjakan" | "proses" | "selesai";
   catatan?: string;
 };
 
@@ -207,6 +221,16 @@ export type KeuanganTrx = {
   jumlah_out: number;
   ref_type?: string;
   ref_id?: string;
+};
+
+export type Addon = {
+  id: string;
+  nama_addon: string;
+  kategori_addon?: string;
+  deskripsi?: string;
+  satuan?: string;
+  harga_satuan_default: number;
+  status: "aktif" | "nonaktif";
 };
 
 type State = {
@@ -227,6 +251,7 @@ type State = {
   crewAssignments: CrewAssignment[];
   timelineEvent: TimelineEventTask[];
   keuangan: KeuanganTrx[];
+  addons: Addon[];
 };
 
 let state: State = {
@@ -247,6 +272,7 @@ let state: State = {
   crewAssignments: [],
   timelineEvent: [],
   keuangan: [],
+  addons: [],
 };
 
 const listeners = new Set<() => void>();
@@ -397,6 +423,12 @@ export const store = {
       harga: p.price,
       fitur: p.features,
       vendor_ids: p.vendorIds || [],
+      kategori_vendors: (p.vendorByCategory || [])
+        .filter((r) => r.kategoriVendorId && (r.vendorIds || []).length > 0)
+        .map((r) => ({
+          kategori_vendor_id: r.kategoriVendorId,
+          vendor_ids: r.vendorIds,
+        })),
       populer: p.popular || false,
     });
     setState((s) => ({ ...s, packages: [
@@ -407,6 +439,10 @@ export const store = {
         price: paket.harga,
         features: paket.fitur,
         vendorIds: paket.vendor_ids || [],
+        vendorByCategory: (paket.kategori_vendors || []).map((r: any) => ({
+          kategoriVendorId: String(r.kategori_vendor_id?._id || r.kategori_vendor_id),
+          vendorIds: (r.vendor_ids || []).map((v: any) => String(v?._id || v)),
+        })),
         popular: paket.populer,
       },
       ...s.packages,
@@ -421,6 +457,14 @@ export const store = {
         harga: p.price,
         fitur: p.features,
         vendor_ids: p.vendorIds,
+        kategori_vendors: typeof p.vendorByCategory !== "undefined"
+          ? (p.vendorByCategory || [])
+              .filter((r) => r.kategoriVendorId && (r.vendorIds || []).length > 0)
+              .map((r) => ({
+                kategori_vendor_id: r.kategoriVendorId,
+                vendor_ids: r.vendorIds,
+              }))
+          : undefined,
         populer: p.popular,
       })
     );
@@ -435,6 +479,10 @@ export const store = {
               price: paket.harga,
               features: paket.fitur,
               vendorIds: paket.vendor_ids || [],
+              vendorByCategory: (paket.kategori_vendors || []).map((r: any) => ({
+                kategoriVendorId: String(r.kategori_vendor_id?._id || r.kategori_vendor_id),
+                vendorIds: (r.vendor_ids || []).map((v: any) => String(v?._id || v)),
+              })),
               popular: paket.populer,
             }
           : x
@@ -454,6 +502,7 @@ export const store = {
       tamu: b.guests,
       status: b.status,
       vendor_dipilih_ids: b.vendorSelectedIds || [],
+      addons: (b.addons || []).map((a: any) => ({ addon_id: a.addonId, qty: a.qty })),
     });
     setState((s) => ({ ...s, bookings: [
       {
@@ -468,8 +517,27 @@ export const store = {
         guests: booking.tamu,
         adatId: booking.adat_id,
         pic: booking.pic,
+        statusBooking: deriveStatusBooking({ status_booking: booking.status_booking, status_review: booking.status_review, status_event: booking.status_event }) as any,
         eventStatus: booking.status_event,
+        reviewStatus: booking.status_review,
         note: booking.catatan,
+        addons: (booking.addons || []).map((a: any) => ({
+          addonId: a.addon_id?._id || a.addon_id,
+          nama_addon: a.nama_addon,
+          kategori_addon: a.kategori_addon,
+          deskripsi: a.deskripsi,
+          satuan: a.satuan,
+          qty: Number(a.qty) || 0,
+          harga_satuan_default: Number(a.harga_satuan_default) || 0,
+          harga_satuan_final: Number(a.harga_satuan_final) || 0,
+          subtotal_default: Number(a.subtotal_default) || 0,
+          subtotal_final: Number(a.subtotal_final) || 0,
+        })),
+        hargaPaketEstimasi: Number(booking.harga_paket_estimasi) || 0,
+        hargaPaketFinal: Number(booking.harga_paket_final) || 0,
+        biayaTambahan: Number(booking.biaya_tambahan) || 0,
+        diskon: Number(booking.diskon) || 0,
+        hargaFinalBooking: Number(booking.harga_final_booking) || 0,
         vendorSelectedIds: booking.vendor_dipilih_ids || [],
         packageSnapshot: booking.paket_snapshot
           ? {
@@ -478,8 +546,8 @@ export const store = {
               price: booking.paket_snapshot.harga,
               features: booking.paket_snapshot.fitur,
               vendorIds: booking.paket_snapshot.vendor_ids,
-            }
-          : undefined,
+              }
+            : undefined,
         status: booking.status,
       },
       ...s.bookings,
@@ -510,8 +578,27 @@ export const store = {
               guests: booking.tamu,
               adatId: booking.adat_id,
               pic: booking.pic,
+              statusBooking: deriveStatusBooking({ status_booking: booking.status_booking, status_review: booking.status_review, status_event: booking.status_event }) as any,
               eventStatus: booking.status_event,
+              reviewStatus: booking.status_review,
               note: booking.catatan,
+              addons: (booking.addons || []).map((a: any) => ({
+                addonId: a.addon_id?._id || a.addon_id,
+                nama_addon: a.nama_addon,
+                kategori_addon: a.kategori_addon,
+                deskripsi: a.deskripsi,
+                satuan: a.satuan,
+                qty: Number(a.qty) || 0,
+                harga_satuan_default: Number(a.harga_satuan_default) || 0,
+                harga_satuan_final: Number(a.harga_satuan_final) || 0,
+                subtotal_default: Number(a.subtotal_default) || 0,
+                subtotal_final: Number(a.subtotal_final) || 0,
+              })),
+              hargaPaketEstimasi: Number(booking.harga_paket_estimasi) || 0,
+              hargaPaketFinal: Number(booking.harga_paket_final) || 0,
+              biayaTambahan: Number(booking.biaya_tambahan) || 0,
+              diskon: Number(booking.diskon) || 0,
+              hargaFinalBooking: Number(booking.harga_final_booking) || 0,
               vendorSelectedIds: booking.vendor_dipilih_ids || [],
               packageSnapshot: booking.paket_snapshot
                 ? {
@@ -544,6 +631,7 @@ export const store = {
     eventStatus?: "draft" | "aktif" | "selesai" | "batal";
     note?: string;
     vendorSelectedIds: string[];
+    addons?: { addonId: string; qty: number }[];
   }) => {
     const booking = await tambahBooking({
       client_id: payload.clientId,
@@ -555,6 +643,7 @@ export const store = {
       status_event: payload.eventStatus || "draft",
       catatan: payload.note,
       vendor_dipilih_ids: payload.vendorSelectedIds || [],
+      addons: (payload.addons || []).map((a) => ({ addon_id: a.addonId, qty: a.qty })),
     });
 
     setState((s) => ({
@@ -572,8 +661,27 @@ export const store = {
           guests: booking.tamu || 0,
           adatId: booking.adat_id?._id || booking.adat_id,
           pic: booking.pic,
+          statusBooking: deriveStatusBooking({ status_booking: booking.status_booking, status_review: booking.status_review, status_event: booking.status_event }) as any,
           eventStatus: booking.status_event,
+          reviewStatus: booking.status_review,
           note: booking.catatan,
+          addons: (booking.addons || []).map((a: any) => ({
+            addonId: a.addon_id?._id || a.addon_id,
+            nama_addon: a.nama_addon,
+            kategori_addon: a.kategori_addon,
+            deskripsi: a.deskripsi,
+            satuan: a.satuan,
+            qty: Number(a.qty) || 0,
+            harga_satuan_default: Number(a.harga_satuan_default) || 0,
+            harga_satuan_final: Number(a.harga_satuan_final) || 0,
+            subtotal_default: Number(a.subtotal_default) || 0,
+            subtotal_final: Number(a.subtotal_final) || 0,
+          })),
+          hargaPaketEstimasi: Number(booking.harga_paket_estimasi) || 0,
+          hargaPaketFinal: Number(booking.harga_paket_final) || 0,
+          biayaTambahan: Number(booking.biaya_tambahan) || 0,
+          diskon: Number(booking.diskon) || 0,
+          hargaFinalBooking: Number(booking.harga_final_booking) || 0,
           vendorSelectedIds: booking.vendor_dipilih_ids || [],
           packageSnapshot: booking.paket_snapshot
             ? {
@@ -636,8 +744,27 @@ export const store = {
               guests: booking.tamu || 0,
               adatId: booking.adat_id?._id || booking.adat_id,
               pic: booking.pic,
+              statusBooking: deriveStatusBooking({ status_booking: booking.status_booking, status_review: booking.status_review, status_event: booking.status_event }) as any,
               eventStatus: booking.status_event,
+              reviewStatus: booking.status_review,
               note: booking.catatan,
+              addons: (booking.addons || []).map((a: any) => ({
+                addonId: a.addon_id?._id || a.addon_id,
+                nama_addon: a.nama_addon,
+                kategori_addon: a.kategori_addon,
+                deskripsi: a.deskripsi,
+                satuan: a.satuan,
+                qty: Number(a.qty) || 0,
+                harga_satuan_default: Number(a.harga_satuan_default) || 0,
+                harga_satuan_final: Number(a.harga_satuan_final) || 0,
+                subtotal_default: Number(a.subtotal_default) || 0,
+                subtotal_final: Number(a.subtotal_final) || 0,
+              })),
+              hargaPaketEstimasi: Number(booking.harga_paket_estimasi) || 0,
+              hargaPaketFinal: Number(booking.harga_paket_final) || 0,
+              biayaTambahan: Number(booking.biaya_tambahan) || 0,
+              diskon: Number(booking.diskon) || 0,
+              hargaFinalBooking: Number(booking.harga_final_booking) || 0,
               vendorSelectedIds: booking.vendor_dipilih_ids || [],
               packageSnapshot: booking.paket_snapshot
                 ? {
@@ -658,6 +785,102 @@ export const store = {
   deleteEventBooking: async (id: string) => {
     await hapusBooking(id);
     setState((s) => ({ ...s, bookings: s.bookings.filter((b) => b.id !== id) }));
+  },
+
+  updateBookingStatus: async (id: string, statusBooking: Booking["statusBooking"]) => {
+    const booking = await editBooking(id, { status_booking: statusBooking });
+    setState((s) => ({
+      ...s,
+      bookings: s.bookings.map((x) =>
+        x.id === id
+          ? {
+              ...x,
+              code: booking.kode_booking,
+              clientCode: booking.kode_client,
+              clientName: booking.nama_client,
+              clientId: booking.id_klien,
+              packageId: booking.id_paket,
+              eventDate: booking.tanggal_acara,
+              venue: booking.lokasi,
+              guests: booking.tamu || 0,
+              adatId: booking.adat_id?._id || booking.adat_id,
+              pic: booking.pic,
+              statusBooking: deriveStatusBooking({ status_booking: booking.status_booking, status_review: booking.status_review, status_event: booking.status_event }) as any,
+              eventStatus: booking.status_event,
+              reviewStatus: booking.status_review,
+              note: booking.catatan,
+              vendorSelectedIds: booking.vendor_dipilih_ids || [],
+              packageSnapshot: booking.paket_snapshot
+                ? {
+                    name: booking.paket_snapshot.nama_paket,
+                    tagline: booking.paket_snapshot.tagline,
+                    price: booking.paket_snapshot.harga,
+                    features: booking.paket_snapshot.fitur,
+                    vendorIds: booking.paket_snapshot.vendor_ids,
+                  }
+                : undefined,
+              status: booking.status,
+            }
+          : x
+      ),
+    }));
+  },
+
+  updateBookingPricing: async (
+    id: string,
+    payload: {
+      harga_paket_final?: number;
+      biaya_tambahan?: number;
+      diskon?: number;
+      addons?: { addonId?: string; nama_addon?: string; kategori_addon?: string; deskripsi?: string; satuan?: string; qty: number; harga_satuan_default?: number; harga_satuan_final?: number }[];
+    }
+  ) => {
+    const booking = await editBooking(id, {
+      harga_paket_final: payload.harga_paket_final,
+      biaya_tambahan: payload.biaya_tambahan,
+      diskon: payload.diskon,
+      addons: (payload.addons || []).map((a) => ({
+        addon_id: a.addonId,
+        nama_addon: a.nama_addon,
+        kategori_addon: a.kategori_addon,
+        deskripsi: a.deskripsi,
+        satuan: a.satuan,
+        qty: a.qty,
+        harga_satuan_default: a.harga_satuan_default,
+        harga_satuan_final: a.harga_satuan_final,
+      })),
+    });
+
+    setState((s) => ({
+      ...s,
+      bookings: s.bookings.map((x) =>
+        x.id === id
+          ? {
+              ...x,
+              statusBooking: deriveStatusBooking({ status_booking: booking.status_booking, status_review: booking.status_review, status_event: booking.status_event }) as any,
+              eventStatus: booking.status_event,
+              reviewStatus: booking.status_review,
+              addons: (booking.addons || []).map((a: any) => ({
+                addonId: a.addon_id?._id || a.addon_id,
+                nama_addon: a.nama_addon,
+                kategori_addon: a.kategori_addon,
+                deskripsi: a.deskripsi,
+                satuan: a.satuan,
+                qty: Number(a.qty) || 0,
+                harga_satuan_default: Number(a.harga_satuan_default) || 0,
+                harga_satuan_final: Number(a.harga_satuan_final) || 0,
+                subtotal_default: Number(a.subtotal_default) || 0,
+                subtotal_final: Number(a.subtotal_final) || 0,
+              })),
+              hargaPaketEstimasi: Number(booking.harga_paket_estimasi) || 0,
+              hargaPaketFinal: Number(booking.harga_paket_final) || 0,
+              biayaTambahan: Number(booking.biaya_tambahan) || 0,
+              diskon: Number(booking.diskon) || 0,
+              hargaFinalBooking: Number(booking.harga_final_booking) || 0,
+            }
+          : x
+      ),
+    }));
   },
   addPayment: async (p: { kode_booking: string; nominal_bayar: number; metode_pembayaran: string; tanggal_pembayaran?: string; jenis_pembayaran?: string; catatan?: string }) => {
     const pay = await tambahPembayaran(p);
@@ -988,6 +1211,13 @@ export const store = {
     await hapusTimelineEvent(id);
     setState((s) => ({ ...s, timelineEvent: s.timelineEvent.filter((x) => x.id !== id) }));
   },
+  refreshTimelineEvent: async (params?: { kode_booking?: string; pic?: string; status?: string }) => {
+    const rows = await ambilTimelineEvent(params);
+    setState((s) => ({
+      ...s,
+      timelineEvent: (rows || []).map((r: any) => ({ id: r._id, ...r })),
+    }));
+  },
 
   // Tahap 12: Keuangan
   addKeuangan: async (payload: Omit<KeuanganTrx, "id" | "no_trx"> & { no_trx?: string }) => {
@@ -1004,6 +1234,20 @@ export const store = {
   deleteKeuangan: async (id: string) => {
     await hapusKeuangan(id);
     setState((s) => ({ ...s, keuangan: s.keuangan.filter((x) => x.id !== id) }));
+  },
+
+  // Master Add-ons
+  addAddon: async (payload: Omit<Addon, "id">) => {
+    const row = await tambahAddon(payload);
+    setState((s) => ({ ...s, addons: [{ id: row._id, ...row }, ...s.addons] }));
+  },
+  updateAddon: async (id: string, payload: Partial<Omit<Addon, "id">>) => {
+    const row = await editAddon(id, payload);
+    setState((s) => ({ ...s, addons: s.addons.map((x) => (x.id === id ? { id: row._id, ...row } : x)) }));
+  },
+  deleteAddon: async (id: string) => {
+    await hapusAddon(id);
+    setState((s) => ({ ...s, addons: s.addons.filter((x) => x.id !== id) }));
   },
 };
 
@@ -1075,6 +1319,10 @@ export const usePackages = () => {
             price: p.harga,
             features: p.fitur,
             vendorIds: p.vendor_ids || [],
+            vendorByCategory: (p.kategori_vendors || []).map((r: any) => ({
+              kategoriVendorId: String(r.kategori_vendor_id?._id || r.kategori_vendor_id),
+              vendorIds: (r.vendor_ids || []).map((v: any) => String(v?._id || v)),
+            })),
             popular: p.populer,
           })),
         }));
@@ -1083,6 +1331,31 @@ export const usePackages = () => {
     }
   }, [initialized]);
   return packages;
+};
+
+export const useAddons = () => {
+  const [initialized, setInitialized] = useState(false);
+  const addons = useSyncExternalStore(subscribe, () => state.addons, () => state.addons);
+  useEffect(() => {
+    if (!initialized) {
+      ambilAddon().then((data) => {
+        setState((s) => ({
+          ...s,
+          addons: (data || []).map((a: any) => ({
+            id: a._id,
+            nama_addon: a.nama_addon,
+            kategori_addon: a.kategori_addon,
+            deskripsi: a.deskripsi,
+            satuan: a.satuan,
+            harga_satuan_default: Number(a.harga_satuan_default) || 0,
+            status: a.status || "aktif",
+          })),
+        }));
+        setInitialized(true);
+      });
+    }
+  }, [initialized]);
+  return addons;
 };
 export const useBookings = () => {
   const [initialized, setInitialized] = useState(false);
@@ -1104,8 +1377,27 @@ export const useBookings = () => {
             guests: b.tamu,
             adatId: b.adat_id?._id || b.adat_id,
             pic: b.pic,
+            statusBooking: deriveStatusBooking({ status_booking: b.status_booking, status_review: b.status_review, status_event: b.status_event }) as any,
             eventStatus: b.status_event,
+            reviewStatus: b.status_review,
             note: b.catatan,
+            addons: (b.addons || []).map((a: any) => ({
+              addonId: a.addon_id?._id || a.addon_id,
+              nama_addon: a.nama_addon,
+              kategori_addon: a.kategori_addon,
+              deskripsi: a.deskripsi,
+              satuan: a.satuan,
+              qty: Number(a.qty) || 0,
+              harga_satuan_default: Number(a.harga_satuan_default) || 0,
+              harga_satuan_final: Number(a.harga_satuan_final) || 0,
+              subtotal_default: Number(a.subtotal_default) || 0,
+              subtotal_final: Number(a.subtotal_final) || 0,
+            })),
+            hargaPaketEstimasi: Number(b.harga_paket_estimasi) || 0,
+            hargaPaketFinal: Number(b.harga_paket_final) || 0,
+            biayaTambahan: Number(b.biaya_tambahan) || 0,
+            diskon: Number(b.diskon) || 0,
+            hargaFinalBooking: Number(b.harga_final_booking) || 0,
             vendorSelectedIds: b.vendor_dipilih_ids || [],
             packageSnapshot: b.paket_snapshot
               ? {

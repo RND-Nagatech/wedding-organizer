@@ -34,6 +34,7 @@ import AdatConcepts from "./pages/admin/AdatConcepts";
 import CatalogBaju from "./pages/admin/CatalogBaju";
 import CatalogDekorasi from "./pages/admin/CatalogDekorasi";
 import CatalogMakeup from "./pages/admin/CatalogMakeup";
+import Addons from "./pages/admin/Addons";
 import ManageUsers from "./pages/admin/ManageUsers";
 import ProfileSettings from "./pages/admin/ProfileSettings";
 import ClientReferencesAdmin from "./pages/admin/ClientReferences";
@@ -89,6 +90,7 @@ const App = () => (
                         <Route path="catalog-baju" element={<CatalogBaju />} />
                         <Route path="catalog-dekorasi" element={<CatalogDekorasi />} />
                         <Route path="catalog-makeup" element={<CatalogMakeup />} />
+                        <Route path="addons" element={<Addons />} />
                         <Route path="client-references" element={<ClientReferencesAdmin />} />
                         <Route path="client-wishlist" element={<ClientWishlistAdmin />} />
                         <Route path="checklist-barang" element={<ChecklistBarang />} />

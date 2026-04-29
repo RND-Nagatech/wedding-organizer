@@ -13,6 +13,7 @@ import { formatDate } from "@/lib/mockData";
 import { toast } from "sonner";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { statusLabel } from "@/lib/labels";
 
 function TaskFormDialog({
   mode,
@@ -69,7 +70,6 @@ function TaskFormDialog({
     const next: Record<string, string> = {};
     if (!form.kode_booking) next.kode_booking = "Kode booking wajib diisi";
     if (!form.nama_tugas) next.nama_tugas = "Nama tugas wajib diisi";
-    if (!form.deadline) next.deadline = "Deadline wajib diisi";
     setErrors(next);
     if (Object.keys(next).length) {
       toast.error("Lengkapi field yang wajib diisi");
@@ -82,7 +82,7 @@ function TaskFormDialog({
         kode_booking: form.kode_booking,
         nama_tugas: form.nama_tugas,
         kategori_tugas: form.kategori_tugas || undefined,
-        deadline: form.deadline,
+        deadline: form.deadline || undefined,
         pic: form.pic || undefined,
         status: form.status,
         catatan: form.catatan || undefined,
@@ -140,7 +140,6 @@ function TaskFormDialog({
                   <SelectItem value="belum_dikerjakan">Belum dikerjakan</SelectItem>
                   <SelectItem value="proses">Proses</SelectItem>
                   <SelectItem value="selesai">Selesai</SelectItem>
-                  <SelectItem value="terlambat">Terlambat</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -160,7 +159,7 @@ function TaskFormDialog({
 
           <div className="grid sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label>Deadline</Label>
+              <Label>Deadline (Opsional)</Label>
               <Input type="date" value={form.deadline} onChange={(e) => setForm((f: any) => ({ ...f, deadline: e.target.value }))} disabled={saving} />
               {errors.deadline ? <div className="text-xs text-destructive">{errors.deadline}</div> : null}
             </div>
@@ -205,6 +204,8 @@ const Timeline = ({ bookingId }: { bookingId?: string }) => {
   const [kodeBooking, setKodeBooking] = useState<string>("all");
   const [pic, setPic] = useState<string>("all");
   const [status, setStatus] = useState<string>("all");
+  const [dateFrom, setDateFrom] = useState<string>("");
+  const [dateTo, setDateTo] = useState<string>("");
   const [q, setQ] = useState("");
 
   useEffect(() => {
@@ -220,6 +221,13 @@ const Timeline = ({ bookingId }: { bookingId?: string }) => {
     if (kb && t.kode_booking !== kb) return false;
     if (pic !== "all" && (t.pic || "") !== pic) return false;
     if (status !== "all" && t.status !== status) return false;
+    if (dateFrom || dateTo) {
+      const d = String(t.deadline || "");
+      // Jika filter deadline dipakai, task tanpa deadline tidak ikut.
+      if (!d) return false;
+      if (dateFrom && d < dateFrom) return false;
+      if (dateTo && d > dateTo) return false;
+    }
     if (q) {
       const hay = `${t.nama_tugas} ${t.kategori_tugas || ""} ${t.catatan || ""}`.toLowerCase();
       if (!hay.includes(q.toLowerCase())) return false;
@@ -230,7 +238,7 @@ const Timeline = ({ bookingId }: { bookingId?: string }) => {
   const pagedList = filtered.slice((page - 1) * perPage, page * perPage);
 
   // Reset page ke 1 jika filter berubah
-  useEffect(() => { setPage(1); }, [kodeBooking, pic, status, q, perPage]);
+  useEffect(() => { setPage(1); }, [kodeBooking, pic, status, dateFrom, dateTo, q, perPage]);
 
   const selectedKodeBooking = fixedBooking?.code || (kodeBooking !== "all" ? kodeBooking : "");
   const selectedTasks = selectedKodeBooking ? tasks.filter((t) => t.kode_booking === selectedKodeBooking) : filtered;
@@ -283,7 +291,7 @@ const Timeline = ({ bookingId }: { bookingId?: string }) => {
 
       <Card className="border-border shadow-soft overflow-hidden">
         <div className="p-4 border-b border-border bg-muted/20">
-          <div className="grid sm:grid-cols-4 gap-3">
+          <div className="grid sm:grid-cols-6 gap-3">
             <div className="space-y-1.5">
               <Label>Booking</Label>
               <Select
@@ -321,9 +329,16 @@ const Timeline = ({ bookingId }: { bookingId?: string }) => {
                   <SelectItem value="belum_dikerjakan">Belum dikerjakan</SelectItem>
                   <SelectItem value="proses">Proses</SelectItem>
                   <SelectItem value="selesai">Selesai</SelectItem>
-                  <SelectItem value="terlambat">Terlambat</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Tanggal Dari</Label>
+              <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Tanggal Sampai</Label>
+              <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
             </div>
             <div className="space-y-1.5">
               <Label>Cari</Label>
@@ -351,9 +366,9 @@ const Timeline = ({ bookingId }: { bookingId?: string }) => {
                   <TableCell className="font-medium">{(t.kode_booking || "—").toUpperCase()}</TableCell>
                   <TableCell>{t.nama_tugas}</TableCell>
                   <TableCell>{t.kategori_tugas || "—"}</TableCell>
-                  <TableCell>{formatDate(t.deadline)}</TableCell>
+                  <TableCell>{t.deadline ? formatDate(t.deadline) : "—"}</TableCell>
                   <TableCell>{t.pic || "—"}</TableCell>
-                  <TableCell className="capitalize">{t.status.replaceAll("_", " ")}</TableCell>
+                  <TableCell>{statusLabel(String(t.status || ""))}</TableCell>
                   <TableCell className="text-right">
                     <div className="inline-flex gap-2">
                       <TaskFormDialog

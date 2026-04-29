@@ -71,6 +71,7 @@ router.post("/", async (req, res) => {
     }
 
     const total =
+      Number(booking.harga_final_booking) ||
       Number(booking.paket_snapshot?.harga) ||
       Number((await TmPackage.findById(String(booking.id_paket)))?.harga) ||
       0;
