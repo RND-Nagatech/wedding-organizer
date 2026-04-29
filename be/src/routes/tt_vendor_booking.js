@@ -13,8 +13,32 @@ router.get("/", async (req, res) => {
     if (vendor_id) q.vendor_id = String(vendor_id);
     if (status) q.status = String(status);
 
-    const data = await TtVendorBooking.find(q).sort({ createdAt: -1 }).populate("vendor_id").populate("kategori_vendor_id");
-    res.json(data);
+    // Default: jangan tampilkan yang sudah batal, kecuali diminta explicit
+    if (!status) q.status = { $ne: "batal" };
+
+    const rows = await TtVendorBooking.find(q)
+      .sort({ updatedAt: -1, createdAt: -1 })
+      .populate("vendor_id")
+      .populate("kategori_vendor_id");
+
+    // De-duplicate by (kode_booking, vendor_id, kategori_vendor_id) - keep latest
+    if (kode_booking) {
+      const seen = new Set();
+      const out = [];
+      for (const r of rows) {
+        const key = [
+          String(r.kode_booking || ""),
+          String(r.vendor_id?._id || r.vendor_id || ""),
+          String(r.kategori_vendor_id?._id || r.kategori_vendor_id || ""),
+        ].join("|");
+        if (seen.has(key)) continue;
+        seen.add(key);
+        out.push(r);
+      }
+      return res.json(out);
+    }
+
+    res.json(rows);
   } catch (err) {
     res.status(500).json({ pesan: "Gagal mengambil data vendor booking", error: err.message });
   }
@@ -40,4 +64,3 @@ router.put("/:id", async (req, res) => {
 });
 
 export default router;
-

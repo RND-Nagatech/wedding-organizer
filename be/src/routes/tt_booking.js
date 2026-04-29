@@ -85,6 +85,41 @@ function addDaysISO(isoDate, days) {
   }
 }
 
+async function upsertVendorBookingsForBooking({
+  kode_booking,
+  tanggal_acara,
+  vendorDocs,
+  status,
+}) {
+  const kode = String(kode_booking || "");
+  const date = String(tanggal_acara || "");
+  const pickedIds = vendorDocs.map((v) => String(v._id));
+
+  // release vendors not in selection (avoid wiping history of selesai/batal)
+  await TtVendorBooking.updateMany(
+    {
+      kode_booking: kode,
+      tanggal_acara: date,
+      vendor_id: { $nin: pickedIds },
+      status: { $in: ["hold", "booked"] },
+    },
+    { $set: { status: "batal" } }
+  );
+
+  for (const v of vendorDocs) {
+    await TtVendorBooking.updateOne(
+      { kode_booking: kode, vendor_id: v._id, tanggal_acara: date },
+      {
+        $set: {
+          kategori_vendor_id: v.kategori_vendor_id || undefined,
+          status,
+        },
+      },
+      { upsert: true }
+    );
+  }
+}
+
 // GET available vendors for a package & date
 // /api/tt_booking/available-vendors?package_id=...&tanggal_acara=yyyy-mm-dd
 router.get("/available-vendors", async (req, res) => {
@@ -116,6 +151,64 @@ router.get("/available-vendors", async (req, res) => {
     res.json(available);
   } catch (err) {
     res.status(500).json({ pesan: "Gagal mengambil vendor available", error: err.message });
+  }
+});
+
+// GET vendor options for editing vendor final (include availability)
+// /api/tt_booking/vendor-options?package_id=...&tanggal_acara=yyyy-mm-dd&kategori_vendor_id=...&kode_booking=... (optional)
+router.get("/vendor-options", async (req, res) => {
+  try {
+    const { package_id, tanggal_acara, kategori_vendor_id, kode_booking } = req.query;
+    if (!package_id || !tanggal_acara || !kategori_vendor_id) {
+      return res.status(400).json({ pesan: "package_id, tanggal_acara, dan kategori_vendor_id wajib diisi" });
+    }
+
+    const paket = await TmPackage.findById(String(package_id));
+    if (!paket) return res.status(404).json({ pesan: "Paket tidak ditemukan" });
+
+    // Allowed vendors by kategori (preferred) or fallback vendor_ids filtered by kategori
+    let allowedVendorIds = [];
+    const kategoriRows = Array.isArray(paket.kategori_vendors) ? paket.kategori_vendors : [];
+    const row = kategoriRows.find((r) => String(r.kategori_vendor_id?._id || r.kategori_vendor_id) === String(kategori_vendor_id));
+    if (row && Array.isArray(row.vendor_ids)) {
+      allowedVendorIds = row.vendor_ids.map((x) => String(x?._id || x)).filter(Boolean);
+    } else {
+      allowedVendorIds = (paket.vendor_ids || []).map((x) => String(x)).filter(Boolean);
+    }
+    if (allowedVendorIds.length === 0) return res.json([]);
+
+    const vendorDocs = await TmVendor.find({
+      _id: { $in: allowedVendorIds },
+      kategori_vendor_id: String(kategori_vendor_id),
+    }).sort({ createdAt: -1 });
+
+    const blocked = await TtVendorBooking.find({
+      vendor_id: { $in: allowedVendorIds },
+      tanggal_acara: String(tanggal_acara),
+      status: { $in: ["hold", "booked"] },
+      ...(kode_booking ? { kode_booking: { $ne: String(kode_booking) } } : {}),
+    }).select("vendor_id status kode_booking");
+    const blockedMap = new Map(blocked.map((b) => [String(b.vendor_id), { status: b.status, kode_booking: b.kode_booking }]));
+
+    const out = vendorDocs.map((v) => {
+      const blk = blockedMap.get(String(v._id));
+      return {
+        _id: v._id,
+        nama_vendor: v.nama_vendor,
+        kategori_vendor_id: v.kategori_vendor_id,
+        kategori_vendor_nama: v.kategori_vendor_nama,
+        telepon: v.telepon,
+        kontak: v.kontak,
+        rentang_harga: v.rentang_harga,
+        available: !blk,
+        blocked_status: blk?.status,
+        blocked_by: blk?.kode_booking,
+      };
+    });
+
+    res.json(out);
+  } catch (err) {
+    res.status(500).json({ pesan: "Gagal mengambil vendor options", error: err.message });
   }
 });
 
@@ -578,29 +671,13 @@ router.put("/:id", async (req, res) => {
       const picked = Array.isArray(booking.vendor_dipilih_ids) ? booking.vendor_dipilih_ids.map(String).filter(Boolean) : [];
       if (picked.length > 0) {
         const kode = String(booking.kode_booking);
-        const existing = await TtVendorBooking.find({
+        const vendorDocs = await TmVendor.find({ _id: { $in: picked } });
+        await upsertVendorBookingsForBooking({
           kode_booking: kode,
-          vendor_id: { $in: picked },
-          tanggal_acara: String(booking.tanggal_acara),
-        }).select("vendor_id");
-        const existingSet = new Set(existing.map((e) => String(e.vendor_id)));
-        const missingIds = picked.filter((vId) => !existingSet.has(String(vId)));
-        if (missingIds.length > 0) {
-          const vendorDocs = await TmVendor.find({ _id: { $in: missingIds } });
-          await TtVendorBooking.insertMany(
-            vendorDocs.map((v) => ({
-              kode_booking: kode,
-              vendor_id: v._id,
-              kategori_vendor_id: v.kategori_vendor_id || undefined,
-              tanggal_acara: String(booking.tanggal_acara),
-              status: "booked",
-            }))
-          );
-        }
-        await TtVendorBooking.updateMany(
-          { kode_booking: kode, vendor_id: { $in: picked }, tanggal_acara: String(booking.tanggal_acara) },
-          { $set: { status: "booked" } }
-        );
+          tanggal_acara: booking.tanggal_acara,
+          vendorDocs,
+          status: "booked",
+        });
       }
     }
 
@@ -647,23 +724,13 @@ router.put("/:id", async (req, res) => {
       }));
       await booking.save();
 
-      await TtVendorBooking.updateMany(
-        { kode_booking: booking.kode_booking },
-        { $set: { status: "batal" } }
-      );
-
       const vendorBookingStatus = vendorStatusFromEventStatus(booking.status_event);
-      if (vendorDocs.length > 0) {
-        await TtVendorBooking.insertMany(
-          vendorDocs.map((v) => ({
-            kode_booking: booking.kode_booking,
-            vendor_id: v._id,
-            kategori_vendor_id: v.kategori_vendor_id || undefined,
-            tanggal_acara: String(booking.tanggal_acara),
-            status: vendorBookingStatus,
-          }))
-        );
-      }
+      await upsertVendorBookingsForBooking({
+        kode_booking: booking.kode_booking,
+        tanggal_acara: booking.tanggal_acara,
+        vendorDocs,
+        status: vendorBookingStatus,
+      });
     }
 
     if (typeof status_event !== "undefined") {

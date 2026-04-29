@@ -21,14 +21,12 @@ function BookingDetailDialog({
   pkgName,
   pkgPrice,
   pkgFeatures,
-  allowedVendors,
   selectedVendors,
 }: {
   kodeBooking: string;
   pkgName: string;
   pkgPrice: number;
   pkgFeatures: string[];
-  allowedVendors: any[];
   selectedVendors: any[];
 }) {
   const [open, setOpen] = useState(false);
@@ -42,7 +40,17 @@ function BookingDetailDialog({
       try {
         setLoading(true);
         const data = await ambilVendorBooking({ kode_booking: kodeBooking });
-        setRows(Array.isArray(data) ? data : []);
+        const raw = Array.isArray(data) ? data : [];
+        // safety: de-dup by vendor_id+kategori_vendor_id (keep latest)
+        const seen = new Set<string>();
+        const out: any[] = [];
+        for (const r of raw) {
+          const key = `${String(r.kode_booking || "")}|${String(r.vendor_id?._id || r.vendor_id || "")}|${String(r.kategori_vendor_id?._id || r.kategori_vendor_id || "")}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          out.push(r);
+        }
+        setRows(out);
       } catch (err: any) {
         setRows([]);
         toast.error(err?.message || "Gagal mengambil daftar vendor booking");
@@ -83,31 +91,17 @@ function BookingDetailDialog({
             </ul>
           </div>
 
-          <div className="grid sm:grid-cols-2 gap-4">
-            <div>
-              <div className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Vendor dalam Paket</div>
-              <ul className="space-y-1 text-sm">
-                {allowedVendors.map((v) => (
-                  <li key={v.id}>
-                    <span className="font-medium">{v.name}</span>{" "}
-                    <span className="text-muted-foreground">· {v.category}</span>
-                  </li>
-                ))}
-                {allowedVendors.length === 0 ? <li className="text-muted-foreground">—</li> : null}
-              </ul>
-            </div>
-            <div>
-              <div className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Vendor Dipilih</div>
-              <ul className="space-y-1 text-sm">
-                {selectedVendors.map((v) => (
-                  <li key={v.id}>
-                    <span className="font-medium">{v.name}</span>{" "}
-                    <span className="text-muted-foreground">· {v.category}</span>
-                  </li>
-                ))}
-                {selectedVendors.length === 0 ? <li className="text-muted-foreground">—</li> : null}
-              </ul>
-            </div>
+          <div>
+            <div className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Vendor Final</div>
+            <ul className="space-y-1 text-sm">
+              {selectedVendors.map((v) => (
+                <li key={v.id}>
+                  <span className="font-medium">{v.name}</span>{" "}
+                  <span className="text-muted-foreground">· {v.category}</span>
+                </li>
+              ))}
+              {selectedVendors.length === 0 ? <li className="text-muted-foreground">—</li> : null}
+            </ul>
           </div>
 
           <div className="rounded-lg border border-border p-4 bg-muted/10 space-y-3">
@@ -129,6 +123,7 @@ function BookingDetailDialog({
                   const saving = savingIds.has(id);
                   const vendorName = r.vendor_id?.nama_vendor || "—";
                   const kategoriName = r.kategori_vendor_id?.nama_kategori || r.vendor_id?.kategori_vendor_nama || "—";
+                  if (String(r.status || "") === "batal") return null;
                   return (
                     <div key={id} className="flex flex-col sm:flex-row sm:items-center gap-2 justify-between rounded-md border border-border bg-background px-3 py-2">
                       <div className="min-w-0">
@@ -257,8 +252,6 @@ const Bookings = () => {
                 const pkgName = b.packageSnapshot?.name || pkg?.name || "-";
                 const pkgPrice = b.packageSnapshot?.price ?? pkg?.price ?? 0;
                 const pkgFeatures = b.packageSnapshot?.features || pkg?.features || [];
-                const allowedVendorIds = b.packageSnapshot?.vendorIds || pkg?.vendorIds || [];
-                const allowedVendors = vendors.filter((v) => allowedVendorIds.includes(v.id));
                 const selectedVendors = vendors.filter((v) => (b.vendorSelectedIds || []).includes(v.id));
                 const kodeBooking = String(b.code || "");
                 return (
@@ -281,7 +274,6 @@ const Bookings = () => {
                           pkgName={pkgName}
                           pkgPrice={pkgPrice}
                           pkgFeatures={pkgFeatures}
-                          allowedVendors={allowedVendors}
                           selectedVendors={selectedVendors}
                         />
 

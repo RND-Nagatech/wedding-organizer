@@ -518,6 +518,14 @@ export async function hapusKatalogFavorit(id: string) {
   return res.json();
 }
 
+// Vendor options (include availability) for vendor final editing
+export async function ambilVendorOptionsByKategori(params: { package_id: string; tanggal_acara: string; kategori_vendor_id: string; kode_booking?: string }) {
+  const qs = `?${new URLSearchParams(params as any).toString()}`;
+  const res = await fetch(`${API_BASE}/tt_booking/vendor-options${qs}`);
+  if (!res.ok) throw new Error("Gagal mengambil vendor options");
+  return res.json();
+}
+
 // Tahap 12: Keuangan (tt_keuangan)
 export async function ambilKeuangan(params?: { tgl_from?: string; tgl_to?: string; kategori?: string }) {
   const qs = params ? `?${new URLSearchParams(params as any).toString()}` : "";

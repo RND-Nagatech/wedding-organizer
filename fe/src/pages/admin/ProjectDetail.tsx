@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   useBookings,
   useChecklistBarang,
@@ -30,7 +30,7 @@ import {
 import { formatDate, formatIDR } from "@/lib/mockData";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
-import { ambilFormulirDigitalByBooking, ambilKategoriVendor, ambilVendorAvailableByKategori, uploadGambar } from "@/lib/api";
+import { ambilFormulirDigitalByBooking, ambilKategoriVendor, ambilVendorOptionsByKategori, uploadGambar } from "@/lib/api";
 import { toast } from "sonner";
 import { ArrowLeft, ExternalLink, FileText, Plus, Trash2, Pencil } from "lucide-react";
 import { statusLabel } from "@/lib/labels";
@@ -164,9 +164,11 @@ export default function ProjectDetail() {
 
   // Approval state (embedded)
   const [kategoriOptions, setKategoriOptions] = useState<any[]>([]);
-  const [loadingAvail, setLoadingAvail] = useState(false);
-  const [availableByKategori, setAvailableByKategori] = useState<Record<string, any[]>>({});
-  const [selectedVendorIds, setSelectedVendorIds] = useState<string[]>([]);
+  const [vendorEditMode, setVendorEditMode] = useState(false);
+  const [selectedKategoriId, setSelectedKategoriId] = useState<string>("");
+  const [loadingVendorOptions, setLoadingVendorOptions] = useState(false);
+  const [vendorOptions, setVendorOptions] = useState<any[]>([]);
+  const [selectedVendorByKategori, setSelectedVendorByKategori] = useState<Record<string, string>>({});
   const [approving, setApproving] = useState(false);
   const [pricingSaving, setPricingSaving] = useState(false);
   const [pricing, setPricing] = useState<any>({
@@ -275,7 +277,16 @@ export default function ProjectDetail() {
 
   useEffect(() => {
     if (!kodeBooking) return;
-    setSelectedVendorIds((booking?.vendorSelectedIds || []).map(String));
+    const next: Record<string, string> = {};
+    const ids = (booking?.vendorSelectedIds || []).map(String);
+    for (const id of ids) {
+      const v = vendors.find((x) => String(x.id) === String(id));
+      const kId = String(v?.categoryId || "");
+      if (!kId) continue;
+      // one vendor per kategori (keep first)
+      if (!next[kId]) next[kId] = String(id);
+    }
+    setSelectedVendorByKategori(next);
   }, [kodeBooking, booking?.vendorSelectedIds]);
 
   useEffect(() => {
@@ -332,32 +343,29 @@ export default function ProjectDetail() {
   }, [pkg?.vendorByCategory, pkg?.vendorIds, booking?.packageSnapshot?.vendorIds, vendors]);
 
   useEffect(() => {
+    if (!vendorEditMode) return;
     if (!booking || !pkg) return;
     if (!booking.eventDate) return;
-    if (!kategoriRows.length) return;
+    const kategoriId = String(selectedKategoriId || "");
+    if (!kategoriId) return;
     (async () => {
       try {
-        setLoadingAvail(true);
-        const next: Record<string, any[]> = {};
-        for (const row of kategoriRows) {
-          const kategoriId = String(row.kategoriVendorId);
-          if (!kategoriId) continue;
-          const data = await ambilVendorAvailableByKategori({
-            package_id: pkg.id,
-            tanggal_acara: booking.eventDate,
-            kategori_vendor_id: kategoriId,
-          });
-          next[kategoriId] = Array.isArray(data) ? data : [];
-        }
-        setAvailableByKategori(next);
+        setLoadingVendorOptions(true);
+        const data = await ambilVendorOptionsByKategori({
+          package_id: pkg.id,
+          tanggal_acara: booking.eventDate,
+          kategori_vendor_id: kategoriId,
+          kode_booking: kodeBooking || undefined,
+        });
+        setVendorOptions(Array.isArray(data) ? data : []);
       } catch (err: any) {
-        setAvailableByKategori({});
-        toast.error(err?.message || "Gagal mengambil vendor available");
+        setVendorOptions([]);
+        toast.error(err?.message || "Gagal mengambil vendor options");
       } finally {
-        setLoadingAvail(false);
+        setLoadingVendorOptions(false);
       }
     })();
-  }, [booking?.id, booking?.eventDate, pkg?.id, kategoriRows]);
+  }, [vendorEditMode, booking?.id, booking?.eventDate, pkg?.id, selectedKategoriId, kodeBooking]);
 
   const taskRows = useMemo(() => {
     if (!kodeBooking) return [];
@@ -1038,83 +1046,117 @@ export default function ProjectDetail() {
             </ul>
 
             <div className="rounded-lg border border-border p-4 bg-muted/10 space-y-3">
-              <div>
-                <div className="font-medium">Pilih Vendor Final</div>
-                <div className="text-sm text-muted-foreground">
-                  Vendor final ditentukan WO berdasarkan paket, kategori, dan availability tanggal acara.
+              <div className="flex items-start justify-between gap-3 flex-wrap">
+                <div>
+                  <div className="font-medium">Vendor Final</div>
+                  <div className="text-sm text-muted-foreground">
+                    Edit vendor final per kategori. Vendor yang tidak available tidak bisa dipilih.
+                  </div>
                 </div>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    const next = !vendorEditMode;
+                    setVendorEditMode(next);
+                    if (next) {
+                      const first = String(Object.keys(selectedVendorByKategori)[0] || kategoriRows[0]?.kategoriVendorId || "");
+                      setSelectedKategoriId(first);
+                    }
+                  }}
+                >
+                  {vendorEditMode ? "Tutup Edit" : "Edit Vendor Final"}
+                </Button>
               </div>
 
               {kategoriRows.length === 0 ? (
                 <div className="text-sm text-muted-foreground">Paket belum dikonfigurasi vendor per kategori.</div>
-              ) : loadingAvail ? (
-                <div className="text-sm text-muted-foreground">Memuat vendor available...</div>
+              ) : !vendorEditMode ? (
+                <div className="text-sm text-muted-foreground">
+                  Klik <span className="font-medium">Edit Vendor Final</span> untuk mengubah pilihan.
+                </div>
               ) : (
                 <div className="space-y-3">
-                  {kategoriRows.map((row) => {
-                    const kategoriId = String(row.kategoriVendorId);
-                    const allowedIds = new Set((row.vendorIds || []).map(String));
-                    const avail = (availableByKategori[kategoriId] || []).filter((v: any) => allowedIds.has(String(v._id)));
-                    const kategoriName =
-                      kategoriOptions.find((x) => String(x._id) === String(kategoriId))?.nama_kategori || "—";
-                    return (
-                      <div key={kategoriId} className="rounded-lg border border-border p-4 space-y-2 bg-background">
-                        <div className="font-medium">{kategoriName}</div>
-                        <div className="max-h-44 overflow-auto rounded-md border border-border p-3 space-y-2">
-                          {avail.length === 0 ? (
-                            <div className="text-sm text-muted-foreground">Tidak ada vendor available.</div>
-                          ) : (
-                            avail.map((v: any) => {
-                              const id = String(v._id);
-                              const checked = selectedVendorIds.includes(id);
-                              return (
-                                <label key={id} className="flex items-center gap-3 text-sm">
-                                  <Checkbox
-                                    checked={checked}
-                                    onCheckedChange={(val) => {
-                                      const next = Boolean(val);
-                                      setSelectedVendorIds((ids) =>
-                                        next ? Array.from(new Set([...ids, id])) : ids.filter((x) => x !== id)
-                                      );
-                                    }}
-                                  />
-                                  <span className="flex-1 min-w-0">
-                                    <span className="font-medium">{v.nama_vendor}</span>{" "}
-                                    <span className="text-muted-foreground">· {v.kategori_vendor_nama || v.kategori_vendor_id?.nama_kategori || "—"}</span>
-                                  </span>
-                                </label>
-                              );
-                            })
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
+                  <div className="space-y-1.5">
+                    <Label>Pilih Kategori Vendor</Label>
+                    <Select value={selectedKategoriId || ""} onValueChange={(v) => setSelectedKategoriId(String(v))}>
+                      <SelectTrigger><SelectValue placeholder="Pilih kategori" /></SelectTrigger>
+                      <SelectContent>
+                        {kategoriRows.map((row) => {
+                          const kId = String(row.kategoriVendorId);
+                          const name = kategoriOptions.find((x) => String(x._id) === kId)?.nama_kategori || "—";
+                          return <SelectItem key={kId} value={kId}>{name}</SelectItem>;
+                        })}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="rounded-lg border border-border p-4 bg-background space-y-2">
+                    <div className="text-sm font-medium">Vendor dalam kategori</div>
+                    {loadingVendorOptions ? (
+                      <div className="text-sm text-muted-foreground">Memuat vendor...</div>
+                    ) : vendorOptions.length === 0 ? (
+                      <div className="text-sm text-muted-foreground">Tidak ada vendor di kategori ini.</div>
+                    ) : (
+                      <RadioGroup
+                        value={selectedKategoriId ? (selectedVendorByKategori[selectedKategoriId] || "") : ""}
+                        onValueChange={(val) => {
+                          const vId = String(val || "");
+                          if (!selectedKategoriId) return;
+                          setSelectedVendorByKategori((prev) => ({ ...prev, [String(selectedKategoriId)]: vId }));
+                        }}
+                        className="space-y-2"
+                      >
+                        {vendorOptions.map((v: any) => {
+                          const id = String(v._id);
+                          const available = Boolean(v.available);
+                          return (
+                            <label
+                              key={id}
+                              className={`flex items-center gap-3 rounded-md border border-border px-3 py-2 text-sm ${available ? "bg-background" : "bg-muted/30 opacity-70"}`}
+                            >
+                              <RadioGroupItem value={id} disabled={!available} />
+                              <span className="flex-1 min-w-0">
+                                <span className="font-medium">{v.nama_vendor}</span>{" "}
+                                <span className="text-muted-foreground">· {v.kategori_vendor_nama || v.kategori_vendor_id?.nama_kategori || "—"}</span>
+                              </span>
+                              <span className={`text-xs px-2 py-0.5 rounded-full border ${available ? "border-success/30 text-success" : "border-destructive/30 text-destructive"}`}>
+                                {available ? "Available" : `Not available (${v.blocked_status || "booked"})`}
+                              </span>
+                            </label>
+                          );
+                        })}
+                      </RadioGroup>
+                    )}
+                  </div>
+
+                  <div className="flex items-center justify-end gap-2">
+                    <Button
+                      className="bg-primary hover:bg-primary/90"
+                      onClick={async () => {
+                        try {
+                          const vendorSelectedIds = Array.from(
+                            new Set(Object.values(selectedVendorByKategori).map(String).filter(Boolean))
+                          );
+                          await store.updateEventBooking(booking.id, {
+                            clientId: booking.clientId,
+                            packageId: booking.packageId,
+                            eventDate: booking.eventDate,
+                            venue: booking.venue,
+                            adatId: booking.adatId,
+                            vendorSelectedIds,
+                          });
+                          toast.success("Vendor final tersimpan");
+                          setVendorEditMode(false);
+                        } catch (err: any) {
+                          toast.error(err?.message || "Gagal menyimpan vendor final");
+                        }
+                      }}
+                    >
+                      Simpan Vendor Final
+                    </Button>
+                  </div>
                 </div>
               )}
-
-              <div className="flex items-center justify-end gap-2">
-                <Button
-                  variant="outline"
-                  onClick={async () => {
-                    try {
-                      await store.updateEventBooking(booking.id, {
-                        clientId: booking.clientId,
-                        packageId: booking.packageId,
-                        eventDate: booking.eventDate,
-                        venue: booking.venue,
-                        adatId: booking.adatId,
-                        vendorSelectedIds: selectedVendorIds,
-                      });
-                      toast.success("Vendor final tersimpan");
-                    } catch (err: any) {
-                      toast.error(err?.message || "Gagal menyimpan vendor final");
-                    }
-                  }}
-                >
-                  Simpan Vendor Final
-                </Button>
-              </div>
             </div>
 
             <div className="rounded-lg border border-border p-4 bg-muted/10 space-y-3">
@@ -1299,7 +1341,10 @@ export default function ProjectDetail() {
                     className="bg-primary hover:bg-primary/90"
                     disabled={approving}
                     onClick={async () => {
-                      if (kategoriRows.length > 0 && selectedVendorIds.length === 0) {
+                      const vendorSelectedIds = Array.from(
+                        new Set(Object.values(selectedVendorByKategori).map(String).filter(Boolean))
+                      );
+                      if (kategoriRows.length > 0 && vendorSelectedIds.length === 0) {
                         toast.error("Pilih minimal 1 vendor final sebelum approve.");
                         return;
                       }
@@ -1330,7 +1375,7 @@ export default function ProjectDetail() {
                           eventDate: booking.eventDate,
                           venue: booking.venue,
                           adatId: booking.adatId,
-                          vendorSelectedIds: selectedVendorIds,
+                          vendorSelectedIds,
                         });
                         await store.updateBookingStatus(booking.id, "approved");
                         await store.refreshTimelineEvent();
