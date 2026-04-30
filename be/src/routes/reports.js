@@ -4,6 +4,8 @@ import TtTimelineEvent from "../models/tt_timeline_event.js";
 import TtPayment from "../models/tt_payment.js";
 import TtKeuangan from "../models/tt_keuangan.js";
 import TmPackage from "../models/tm_package.js";
+import TtVendorBooking from "../models/tt_vendor_booking.js";
+import TmVendor from "../models/tm_vendor.js";
 
 const router = express.Router();
 
@@ -193,5 +195,175 @@ router.get("/keuangan-rekap", async (req, res) => {
   }
 });
 
-export default router;
+// 5) Laporan Vendor - Availability by date
+// GET /api/reports/vendors/availability?tanggal=yyyy-mm-dd&kategori_vendor_id=...
+router.get("/vendors/availability", async (req, res) => {
+  try {
+    const { tanggal, tgl_from, tgl_to, kategori_vendor_id, vendor_id } = req.query;
+    const from = String(tgl_from || tanggal || "");
+    const to = String(tgl_to || tanggal || "");
+    if (!from) return res.status(400).json({ pesan: "tanggal atau tgl_from wajib diisi" });
 
+    const vendorQuery = {};
+    if (kategori_vendor_id && String(kategori_vendor_id) !== "all") {
+      vendorQuery.kategori_vendor_id = String(kategori_vendor_id);
+    }
+    if (vendor_id && String(vendor_id) !== "all") {
+      vendorQuery._id = String(vendor_id);
+    }
+    const vendors = await TmVendor.find(vendorQuery).sort({ createdAt: -1 });
+    const vendorIds = vendors.map((v) => v._id);
+
+    const bookings = vendorIds.length
+      ? await TtVendorBooking.find({
+          vendor_id: { $in: vendorIds },
+          tanggal_acara: { $gte: from, $lte: to || from },
+          status: { $in: ["hold", "booked"] },
+        }).select("vendor_id status kode_booking jam_mulai jam_selesai createdAt")
+      : [];
+
+    const byVendor = new Map();
+    for (const b of bookings) {
+      const id = String(b.vendor_id);
+      const cur = byVendor.get(id) || [];
+      cur.push({
+        kode_booking: b.kode_booking,
+        status: b.status,
+        tanggal_acara: b.tanggal_acara,
+        jam_mulai: b.jam_mulai,
+        jam_selesai: b.jam_selesai,
+        createdAt: b.createdAt,
+      });
+      byVendor.set(id, cur);
+    }
+
+    const out = vendors.map((v) => {
+      const rows = byVendor.get(String(v._id)) || [];
+      const status = rows.some((r) => r.status === "booked") ? "booked" : rows.length ? "hold" : "available";
+      return {
+        vendor_id: String(v._id),
+        nama_vendor: v.nama_vendor,
+        kategori_vendor_id: v.kategori_vendor_id ? String(v.kategori_vendor_id) : null,
+        kategori_vendor_nama: v.kategori_vendor_nama || null,
+        status,
+        bookings: rows
+          .sort((a, b) => String(a.createdAt || "").localeCompare(String(b.createdAt || "")))
+          .map((r) => ({
+            tanggal_acara: r.tanggal_acara,
+            kode_booking: r.kode_booking,
+            status: r.status,
+            jam_mulai: r.jam_mulai,
+            jam_selesai: r.jam_selesai,
+          })),
+      };
+    });
+
+    res.json(out);
+  } catch (err) {
+    res.status(500).json({ pesan: "Gagal mengambil laporan vendor availability", error: err.message });
+  }
+});
+
+// 7) Laporan Vendor - bookings grouped by vendor
+// GET /api/reports/vendors/bookings?tgl_from=...&tgl_to=...&kategori_vendor_id=...&vendor_id=...
+router.get("/vendors/bookings", async (req, res) => {
+  try {
+    const { tgl_from, tgl_to, kategori_vendor_id, vendor_id } = req.query;
+    const q = {};
+    if (tgl_from || tgl_to) {
+      q.tanggal_acara = {};
+      if (tgl_from) q.tanggal_acara.$gte = String(tgl_from);
+      if (tgl_to) q.tanggal_acara.$lte = String(tgl_to);
+    }
+    if (vendor_id && String(vendor_id) !== "all") q.vendor_id = String(vendor_id);
+    if (kategori_vendor_id && String(kategori_vendor_id) !== "all") q.kategori_vendor_id = String(kategori_vendor_id);
+    // exclude cancelled vendor booking from report-by-vendor
+    q.status = { $ne: "batal" };
+
+    const rows = await TtVendorBooking.find(q)
+      .sort({ vendor_id: 1, tanggal_acara: 1, createdAt: 1 })
+      .populate("vendor_id");
+
+    const kodeBookings = Array.from(new Set(rows.map((r) => String(r.kode_booking)).filter(Boolean)));
+    const bookingDocs = kodeBookings.length
+      ? await TtBooking.find({ kode_booking: { $in: kodeBookings } }).select("kode_booking nama_client")
+      : [];
+    const bookingMap = new Map(bookingDocs.map((b) => [String(b.kode_booking), b]));
+
+    const grouped = new Map();
+    for (const r of rows) {
+      const v = r.vendor_id;
+      const vid = String(v?._id || r.vendor_id);
+      if (!vid) continue;
+      const cur = grouped.get(vid) || {
+        vendor_id: vid,
+        nama_vendor: v?.nama_vendor,
+        kategori_vendor_id: v?.kategori_vendor_id ? String(v.kategori_vendor_id) : null,
+        kategori_vendor_nama: v?.kategori_vendor_nama || null,
+        bookings: [],
+      };
+      cur.bookings.push({
+        tanggal_booking: r.tanggal_acara,
+        kode_booking: r.kode_booking,
+        nama_client: bookingMap.get(String(r.kode_booking))?.nama_client || null,
+        status_vendor_booking: r.status,
+        jam_mulai: r.jam_mulai,
+        jam_selesai: r.jam_selesai,
+      });
+      grouped.set(vid, cur);
+    }
+
+    const out = Array.from(grouped.values()).map((g) => ({
+      ...g,
+      bookings: (g.bookings || []).sort((a, b) => String(a.tanggal_booking || "").localeCompare(String(b.tanggal_booking || ""))),
+    }));
+    res.json(out);
+  } catch (err) {
+    res.status(500).json({ pesan: "Gagal mengambil laporan vendor booking", error: err.message });
+  }
+});
+
+// 6) Laporan Vendor - Schedule per vendor
+// GET /api/reports/vendors/schedule?vendor_id=...&tgl_from=...&tgl_to=...
+router.get("/vendors/schedule", async (req, res) => {
+  try {
+    const { vendor_id, tgl_from, tgl_to } = req.query;
+    if (!vendor_id) return res.status(400).json({ pesan: "vendor_id wajib diisi" });
+
+    const v = await TmVendor.findById(String(vendor_id));
+    if (!v) return res.status(404).json({ pesan: "Vendor tidak ditemukan" });
+
+    const q = { vendor_id: String(vendor_id) };
+    if (tgl_from || tgl_to) {
+      q.tanggal_acara = {};
+      if (tgl_from) q.tanggal_acara.$gte = String(tgl_from);
+      if (tgl_to) q.tanggal_acara.$lte = String(tgl_to);
+    }
+
+    const rows = await TtVendorBooking.find(q).sort({ tanggal_acara: -1, createdAt: -1 }).select("tanggal_acara kode_booking status jam_mulai jam_selesai");
+    const kodeBookings = Array.from(new Set(rows.map((r) => String(r.kode_booking)).filter(Boolean)));
+    const bookingDocs = kodeBookings.length ? await TtBooking.find({ kode_booking: { $in: kodeBookings } }).select("kode_booking nama_client") : [];
+    const bookingMap = new Map(bookingDocs.map((b) => [String(b.kode_booking), b]));
+
+    res.json({
+      vendor: {
+        vendor_id: String(v._id),
+        nama_vendor: v.nama_vendor,
+        kategori_vendor_id: v.kategori_vendor_id ? String(v.kategori_vendor_id) : null,
+        kategori_vendor_nama: v.kategori_vendor_nama || null,
+      },
+      schedule: rows.map((r) => ({
+        tanggal_booking: r.tanggal_acara,
+        kode_booking: r.kode_booking,
+        nama_client: bookingMap.get(String(r.kode_booking))?.nama_client || null,
+        status_vendor_booking: r.status,
+        jam_mulai: r.jam_mulai,
+        jam_selesai: r.jam_selesai,
+      })),
+    });
+  } catch (err) {
+    res.status(500).json({ pesan: "Gagal mengambil jadwal vendor", error: err.message });
+  }
+});
+
+export default router;

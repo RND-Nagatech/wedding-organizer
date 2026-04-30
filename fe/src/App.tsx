@@ -29,6 +29,7 @@ import EventReport from "./pages/admin/reports/EventReport";
 import PaymentsReport from "./pages/admin/reports/PaymentsReport";
 import KeuanganDetailReport from "./pages/admin/reports/KeuanganDetailReport";
 import KeuanganRekapReport from "./pages/admin/reports/KeuanganRekapReport";
+import VendorReport from "./pages/admin/reports/VendorReport";
 import Settings from "./pages/admin/Settings";
 import AdatConcepts from "./pages/admin/AdatConcepts";
 import CatalogBaju from "./pages/admin/CatalogBaju";
@@ -111,6 +112,7 @@ const App = () => (
                       <Route path="reports" element={<RequirePermission permission="reports"><ReportsHome /></RequirePermission>} />
                       <Route path="reports/events" element={<RequirePermission permission="reports"><EventReport /></RequirePermission>} />
                       <Route path="reports/payments" element={<RequirePermission permission="reports"><PaymentsReport /></RequirePermission>} />
+                      <Route path="reports/vendors" element={<RequirePermission permission="reports"><VendorReport /></RequirePermission>} />
                         <Route path="reports/keuangan-detail" element={<RequirePermission permission="reports"><KeuanganDetailReport /></RequirePermission>} />
                         <Route path="reports/keuangan-rekap" element={<RequirePermission permission="reports"><KeuanganRekapReport /></RequirePermission>} />
                         <Route path="whatsapp" element={<RequirePermission permission="settings"><WhatsAppSettings /></RequirePermission>} />

@@ -18,6 +18,7 @@ import { RupiahInput } from "@/components/RupiahInput";
 import { statusLabel } from "@/lib/labels";
 
 const API_ORIGIN = (import.meta.env.VITE_API_URL || "http://localhost:5001/api").replace(/\/api\/?$/, "");
+const SENTINEL_NONE = "__none__";
 
 function MakeupFormDialog({
   mode,
@@ -40,8 +41,8 @@ function MakeupFormDialog({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [form, setForm] = useState<any>({
     nama_style: "",
-    kategori: "natural",
-    vendor_mua_id: "",
+    kategori: SENTINEL_NONE,
+    vendor_mua_id: SENTINEL_NONE,
     foto: "",
     harga: 0,
     catatan: "",
@@ -53,8 +54,8 @@ function MakeupFormDialog({
     setErrors({});
     setForm({
       nama_style: initial?.nama_style ?? "",
-      kategori: initial?.kategori ?? "natural",
-      vendor_mua_id: initial?.vendor_mua_id ?? (vendorMuaOptions[0]?.id ?? ""),
+      kategori: initial?.kategori ?? SENTINEL_NONE,
+      vendor_mua_id: initial?.vendor_mua_id ?? SENTINEL_NONE,
       foto: initial?.foto ?? "",
       harga: initial?.harga ?? 0,
       catatan: initial?.catatan ?? "",
@@ -66,8 +67,6 @@ function MakeupFormDialog({
     e.preventDefault();
     const next: Record<string, string> = {};
     if (!form.nama_style) next.nama_style = "Nama style wajib diisi";
-    if (!form.kategori) next.kategori = "Kategori wajib diisi";
-    if (!form.vendor_mua_id) next.vendor_mua_id = "Vendor MUA wajib diisi";
     setErrors(next);
     if (Object.keys(next).length) {
       toast.error("Lengkapi field yang wajib diisi");
@@ -78,8 +77,8 @@ function MakeupFormDialog({
       setSaving(true);
       const payload = {
         nama_style: form.nama_style,
-        kategori: form.kategori,
-        vendor_mua_id: form.vendor_mua_id,
+        kategori: form.kategori === SENTINEL_NONE ? undefined : form.kategori,
+        vendor_mua_id: form.vendor_mua_id === SENTINEL_NONE ? undefined : form.vendor_mua_id,
         foto: form.foto,
         harga: Number(form.harga) || 0,
         catatan: form.catatan,
@@ -103,7 +102,7 @@ function MakeupFormDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="font-display text-2xl">
             {mode === "add" ? "Tambah Katalog Makeup" : "Edit Katalog Makeup"}
@@ -133,8 +132,9 @@ function MakeupFormDialog({
             <div className="space-y-1.5">
               <Label>Kategori</Label>
               <Select value={form.kategori} onValueChange={(v) => setForm((f: any) => ({ ...f, kategori: v }))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="(Opsional) Pilih kategori" /></SelectTrigger>
                 <SelectContent>
+                  <SelectItem value={SENTINEL_NONE}>—</SelectItem>
                   {["natural", "bold", "glam", "adat", "modern"].map((k) => (
                     <SelectItem key={k} value={k}>
                       {k}
@@ -142,13 +142,13 @@ function MakeupFormDialog({
                   ))}
                 </SelectContent>
               </Select>
-              {errors.kategori ? <div className="text-xs text-destructive">{errors.kategori}</div> : null}
             </div>
             <div className="space-y-1.5">
               <Label>Vendor MUA</Label>
               <Select value={form.vendor_mua_id} onValueChange={(v) => setForm((f: any) => ({ ...f, vendor_mua_id: v }))}>
-                <SelectTrigger><SelectValue placeholder="Pilih vendor MUA" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="(Opsional) Pilih vendor MUA" /></SelectTrigger>
                 <SelectContent>
+                  <SelectItem value={SENTINEL_NONE}>—</SelectItem>
                   {vendorMuaOptions.map((v) => (
                     <SelectItem key={v.id} value={v.id}>
                       {v.name}
@@ -156,7 +156,6 @@ function MakeupFormDialog({
                   ))}
                 </SelectContent>
               </Select>
-              {errors.vendor_mua_id ? <div className="text-xs text-destructive">{errors.vendor_mua_id}</div> : null}
             </div>
           </div>
 

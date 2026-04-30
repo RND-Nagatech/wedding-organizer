@@ -148,7 +148,7 @@ const Reports = () => {
       <PageHeader title="Laporan" subtitle="Event, pembayaran klien, dan keuangan" />
 
       <Tabs defaultValue="event">
-        <TabsList className="mb-4">
+        <TabsList className="mb-4 flex w-full gap-2 overflow-x-auto flex-nowrap h-auto justify-start">
           <TabsTrigger value="event">Laporan Event</TabsTrigger>
           <TabsTrigger value="payment">Pembayaran Klien</TabsTrigger>
           <TabsTrigger value="keu-detail">Keuangan Detail</TabsTrigger>

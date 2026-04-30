@@ -16,6 +16,7 @@ import { uploadGambar } from "@/lib/api";
 import { statusLabel } from "@/lib/labels";
 
 const API_ORIGIN = (import.meta.env.VITE_API_URL || "http://localhost:5001/api").replace(/\/api\/?$/, "");
+const SENTINEL_NONE = "__none__";
 
 function CatalogBajuFormDialog({
   mode,
@@ -33,8 +34,8 @@ function CatalogBajuFormDialog({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [form, setForm] = useState<any>({
     nama_baju: "",
-    kategori: "akad",
-    adat_id: "",
+    kategori: SENTINEL_NONE,
+    adat_id: SENTINEL_NONE,
     model: "",
     warna: "",
     ukuran: "",
@@ -48,8 +49,8 @@ function CatalogBajuFormDialog({
     setErrors({});
     setForm({
       nama_baju: initial?.nama_baju ?? "",
-      kategori: initial?.kategori ?? "akad",
-      adat_id: initial?.adat_id ?? (adat[0]?.id ?? ""),
+      kategori: initial?.kategori ?? SENTINEL_NONE,
+      adat_id: initial?.adat_id ?? SENTINEL_NONE,
       model: initial?.model ?? "",
       warna: initial?.warna ?? "",
       ukuran: initial?.ukuran ?? "",
@@ -63,8 +64,6 @@ function CatalogBajuFormDialog({
     e.preventDefault();
     const next: Record<string, string> = {};
     if (!form.nama_baju) next.nama_baju = "Nama baju wajib diisi";
-    if (!form.kategori) next.kategori = "Kategori wajib diisi";
-    if (!form.adat_id) next.adat_id = "Adat wajib diisi";
     setErrors(next);
     if (Object.keys(next).length) {
       toast.error("Lengkapi field yang wajib diisi");
@@ -74,8 +73,8 @@ function CatalogBajuFormDialog({
       setSaving(true);
       const payload = {
         nama_baju: form.nama_baju,
-        kategori: form.kategori,
-        adat_id: form.adat_id,
+        kategori: form.kategori === SENTINEL_NONE ? undefined : form.kategori,
+        adat_id: form.adat_id === SENTINEL_NONE ? undefined : form.adat_id,
         model: form.model,
         warna: form.warna,
         ukuran: form.ukuran,
@@ -101,7 +100,7 @@ function CatalogBajuFormDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="font-display text-2xl">
             {mode === "add" ? "Tambah Katalog Baju" : "Edit Katalog Baju"}
@@ -131,20 +130,21 @@ function CatalogBajuFormDialog({
             <div className="space-y-1.5">
               <Label>Kategori</Label>
               <Select value={form.kategori} onValueChange={(v) => setForm((f: any) => ({ ...f, kategori: v }))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="(Opsional) Pilih kategori" /></SelectTrigger>
                 <SelectContent>
+                  <SelectItem value={SENTINEL_NONE}>—</SelectItem>
                   <SelectItem value="akad">Akad</SelectItem>
                   <SelectItem value="resepsi">Resepsi</SelectItem>
                   <SelectItem value="prewedding">Prewedding</SelectItem>
                 </SelectContent>
               </Select>
-              {errors.kategori ? <div className="text-xs text-destructive">{errors.kategori}</div> : null}
             </div>
             <div className="space-y-1.5">
-              <Label>Adat</Label>
+              <Label>Adat (Opsional)</Label>
               <Select value={form.adat_id} onValueChange={(v) => setForm((f: any) => ({ ...f, adat_id: v }))}>
-                <SelectTrigger><SelectValue placeholder="Pilih adat" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="(Opsional) Pilih adat" /></SelectTrigger>
                 <SelectContent>
+                  <SelectItem value={SENTINEL_NONE}>—</SelectItem>
                   {adat.map((a) => (
                     <SelectItem key={a.id} value={a.id}>
                       {a.nama_adat}
@@ -152,7 +152,6 @@ function CatalogBajuFormDialog({
                   ))}
                 </SelectContent>
               </Select>
-              {errors.adat_id ? <div className="text-xs text-destructive">{errors.adat_id}</div> : null}
             </div>
           </div>
 

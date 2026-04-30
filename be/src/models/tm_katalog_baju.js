@@ -3,8 +3,8 @@ import mongoose from "mongoose";
 const TmKatalogBajuSchema = new mongoose.Schema(
   {
     nama_baju: { type: String, required: true, trim: true },
-    kategori: { type: String, enum: ["akad", "resepsi", "prewedding"], required: true, index: true },
-    adat_id: { type: mongoose.Schema.Types.ObjectId, ref: "tm_adat", required: true, index: true },
+    kategori: { type: String, enum: ["akad", "resepsi", "prewedding"], required: false, index: true },
+    adat_id: { type: mongoose.Schema.Types.ObjectId, ref: "tm_adat", required: false, index: true },
     model: { type: String, trim: true },
     warna: { type: String, trim: true },
     ukuran: { type: String, trim: true },
@@ -16,4 +16,3 @@ const TmKatalogBajuSchema = new mongoose.Schema(
 );
 
 export default mongoose.model("tm_katalog_baju", TmKatalogBajuSchema);
-

@@ -69,16 +69,16 @@ const EventReport = () => {
       <PageHeader title="Laporan Event" subtitle={`${rows.length} baris`} />
       <Card className="border-border shadow-soft overflow-hidden">
         <div className="p-4 border-b border-border bg-muted/20">
-          <div className="grid lg:grid-cols-6 gap-3 items-end">
-            <div className="space-y-1.5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 items-end">
+            <div className="space-y-1.5 lg:col-span-2">
               <Label>Dari</Label>
               <Input type="date" value={evtFrom} onChange={(e) => setEvtFrom(e.target.value)} />
             </div>
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 lg:col-span-2">
               <Label>Sampai</Label>
               <Input type="date" value={evtTo} onChange={(e) => setEvtTo(e.target.value)} />
             </div>
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 lg:col-span-2">
               <Label>Status</Label>
               <Select value={evtStatus} onValueChange={setEvtStatus}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
@@ -90,7 +90,7 @@ const EventReport = () => {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 lg:col-span-3">
               <Label>Paket</Label>
               <Select value={evtPaket} onValueChange={setEvtPaket}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
@@ -102,13 +102,13 @@ const EventReport = () => {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 lg:col-span-3">
               <Label>PIC</Label>
               <Input value={evtPic} onChange={(e) => setEvtPic(e.target.value)} placeholder="Nama PIC" />
             </div>
-            <div className="flex gap-2 justify-end">
-              <Button variant="outline" onClick={load} disabled={loading}>
-                {loading ? "Memuat..." : "Filter"}
+            <div className="flex flex-wrap gap-2 justify-start lg:justify-end lg:col-span-12">
+              <Button className="bg-primary hover:bg-primary/90" onClick={load} disabled={loading}>
+                {loading ? "Memuat..." : "Cari Data"}
               </Button>
               <Button
                 variant="outline"

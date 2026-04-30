@@ -18,6 +18,7 @@ import { RupiahInput } from "@/components/RupiahInput";
 import { statusLabel } from "@/lib/labels";
 
 const API_ORIGIN = (import.meta.env.VITE_API_URL || "http://localhost:5001/api").replace(/\/api\/?$/, "");
+const SENTINEL_NONE = "__none__";
 
 function DekorasiFormDialog({
   mode,
@@ -37,7 +38,7 @@ function DekorasiFormDialog({
   const [form, setForm] = useState<any>({
     nama_dekorasi: "",
     tema: "",
-    adat_id: "",
+    adat_id: SENTINEL_NONE,
     warna_dominan: "",
     vendor_id: "",
     harga: 0,
@@ -52,7 +53,7 @@ function DekorasiFormDialog({
     setForm({
       nama_dekorasi: initial?.nama_dekorasi ?? "",
       tema: initial?.tema ?? "",
-      adat_id: initial?.adat_id ?? (adat[0]?.id ?? ""),
+      adat_id: initial?.adat_id ?? SENTINEL_NONE,
       warna_dominan: initial?.warna_dominan ?? "",
       vendor_id: initial?.vendor_id ?? "",
       harga: initial?.harga ?? 0,
@@ -66,7 +67,6 @@ function DekorasiFormDialog({
     e.preventDefault();
     const next: Record<string, string> = {};
     if (!form.nama_dekorasi) next.nama_dekorasi = "Nama dekorasi wajib diisi";
-    if (!form.adat_id) next.adat_id = "Adat wajib diisi";
     setErrors(next);
     if (Object.keys(next).length) {
       toast.error("Lengkapi field yang wajib diisi");
@@ -78,7 +78,7 @@ function DekorasiFormDialog({
       const payload = {
         nama_dekorasi: form.nama_dekorasi,
         tema: form.tema,
-        adat_id: form.adat_id,
+        adat_id: form.adat_id === SENTINEL_NONE ? undefined : form.adat_id,
         warna_dominan: form.warna_dominan,
         vendor_id: form.vendor_id || undefined,
         harga: Number(form.harga) || 0,
@@ -104,7 +104,7 @@ function DekorasiFormDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="font-display text-2xl">
             {mode === "add" ? "Tambah Katalog Dekorasi" : "Edit Katalog Dekorasi"}
@@ -145,8 +145,9 @@ function DekorasiFormDialog({
             <div className="space-y-1.5">
               <Label>Adat</Label>
               <Select value={form.adat_id} onValueChange={(v) => setForm((f: any) => ({ ...f, adat_id: v }))}>
-                <SelectTrigger><SelectValue placeholder="Pilih adat" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="(Opsional) Pilih adat" /></SelectTrigger>
                 <SelectContent>
+                  <SelectItem value={SENTINEL_NONE}>—</SelectItem>
                   {adat.map((a) => (
                     <SelectItem key={a.id} value={a.id}>
                       {a.nama_adat}
@@ -154,10 +155,9 @@ function DekorasiFormDialog({
                   ))}
                 </SelectContent>
               </Select>
-              {errors.adat_id ? <div className="text-xs text-destructive">{errors.adat_id}</div> : null}
             </div>
             <div className="space-y-1.5">
-              <Label>Vendor (Opsional)</Label>
+              <Label>Vendor</Label>
               <Select value={form.vendor_id || "__none__"} onValueChange={(v) => setForm((f: any) => ({ ...f, vendor_id: v === "__none__" ? "" : v }))}>
                 <SelectTrigger><SelectValue placeholder="Pilih vendor" /></SelectTrigger>
                 <SelectContent>

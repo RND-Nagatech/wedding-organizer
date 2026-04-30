@@ -16,8 +16,6 @@ router.post("/", async (req, res) => {
   try {
     const { nama_style, kategori, vendor_mua_id } = req.body || {};
     if (!nama_style) return res.status(400).json({ pesan: "nama_style wajib diisi" });
-    if (!kategori) return res.status(400).json({ pesan: "kategori wajib diisi" });
-    if (!vendor_mua_id) return res.status(400).json({ pesan: "vendor_mua_id wajib diisi" });
 
     const data = await TmKatalogMakeup.create(req.body);
     res.status(201).json(data);
@@ -47,4 +45,3 @@ router.delete("/:id", async (req, res) => {
 });
 
 export default router;
-

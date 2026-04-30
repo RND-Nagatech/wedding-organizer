@@ -550,6 +550,7 @@ export const store = {
         biayaTambahan: Number(booking.biaya_tambahan) || 0,
         diskon: Number(booking.diskon) || 0,
         hargaFinalBooking: Number(booking.harga_final_booking) || 0,
+        pricingReviewedAt: booking.pricing_reviewed_at ? String(booking.pricing_reviewed_at) : undefined,
         vendorSelectedIds: booking.vendor_dipilih_ids || [],
         packageSnapshot: booking.paket_snapshot
           ? {
@@ -694,6 +695,7 @@ export const store = {
           biayaTambahan: Number(booking.biaya_tambahan) || 0,
           diskon: Number(booking.diskon) || 0,
           hargaFinalBooking: Number(booking.harga_final_booking) || 0,
+          pricingReviewedAt: booking.pricing_reviewed_at ? String(booking.pricing_reviewed_at) : undefined,
           vendorSelectedIds: booking.vendor_dipilih_ids || [],
           packageSnapshot: booking.paket_snapshot
             ? {
@@ -781,6 +783,7 @@ export const store = {
               biayaTambahan: Number(booking.biaya_tambahan) || 0,
               diskon: Number(booking.diskon) || 0,
               hargaFinalBooking: Number(booking.harga_final_booking) || 0,
+              pricingReviewedAt: booking.pricing_reviewed_at ? String(booking.pricing_reviewed_at) : undefined,
               vendorSelectedIds: booking.vendor_dipilih_ids || [],
               packageSnapshot: booking.paket_snapshot
                 ? {
@@ -826,6 +829,7 @@ export const store = {
               reviewStatus: booking.status_review,
               note: booking.catatan,
               vendorSelectedIds: booking.vendor_dipilih_ids || [],
+              pricingReviewedAt: booking.pricing_reviewed_at ? String(booking.pricing_reviewed_at) : undefined,
               packageSnapshot: booking.paket_snapshot
                 ? {
                     name: booking.paket_snapshot.nama_paket,
@@ -893,6 +897,7 @@ export const store = {
               biayaTambahan: Number(booking.biaya_tambahan) || 0,
               diskon: Number(booking.diskon) || 0,
               hargaFinalBooking: Number(booking.harga_final_booking) || 0,
+              pricingReviewedAt: booking.pricing_reviewed_at ? String(booking.pricing_reviewed_at) : undefined,
             }
           : x
       ),
@@ -1491,6 +1496,7 @@ export const useBookings = () => {
             biayaTambahan: Number(b.biaya_tambahan) || 0,
             diskon: Number(b.diskon) || 0,
             hargaFinalBooking: Number(b.harga_final_booking) || 0,
+            pricingReviewedAt: b.pricing_reviewed_at ? String(b.pricing_reviewed_at) : undefined,
             vendorSelectedIds: b.vendor_dipilih_ids || [],
             packageSnapshot: b.paket_snapshot
               ? {

@@ -119,6 +119,7 @@ export type Booking = {
   biayaTambahan?: number;
   diskon?: number;
   hargaFinalBooking?: number;
+  pricingReviewedAt?: string;
   status: "Pending" | "Confirmed" | "Done";
 };
 

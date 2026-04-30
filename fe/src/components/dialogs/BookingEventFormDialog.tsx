@@ -54,7 +54,7 @@ export function BookingEventFormDialog(props: {
     setForm({
       clientId: initial?.clientId ?? (mode === "add" ? "" : clients[0]?.id ?? ""),
       packageId: initial?.packageId ?? (packages[0]?.id ?? ""),
-      adatId: initial?.adatId ?? (adat[0]?.id ?? ""),
+      adatId: initial?.adatId ?? "",
       eventDate: mode === "add" ? "" : (initial?.eventDate ?? ""),
       venue: initial?.venue ?? "",
       pic: initial?.pic ?? "",
@@ -171,7 +171,7 @@ export function BookingEventFormDialog(props: {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="font-display text-2xl">
             {mode === "add" ? "Buat Booking / Event" : "Edit Booking / Event"}

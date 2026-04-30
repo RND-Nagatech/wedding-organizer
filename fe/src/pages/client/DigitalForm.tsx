@@ -10,61 +10,58 @@ import { ambilFormulirDigitalByBooking, upsertFormulirDigital } from "@/lib/api"
 import { toast } from "sonner";
 import { useEffect, useMemo, useState } from "react";
 import { Download, Save, Pencil } from "lucide-react";
+import { useSystemProfile } from "@/contexts/SystemProfileContext";
+import { buildSimpleProfessionalPdf } from "@/lib/pdfTemplate";
 
 async function exportFormToPdf(opts: { kode_booking: string; data: any }) {
-  const { default: jsPDF } = await import("jspdf");
-  const doc = new jsPDF({ orientation: "portrait" });
-  const marginX = 14;
-  let y = 14;
-  doc.setFontSize(14);
-  doc.text("Formulir Digital Acara", marginX, y);
-  y += 8;
-  doc.setFontSize(10);
-  doc.text(`Booking: ${String(opts.kode_booking || "").toUpperCase()}`, marginX, y);
-  y += 8;
-
-  const lines: Array<[string, string]> = [
-    ["Nama Pengantin Pria", opts.data.nama_pengantin_pria],
-    ["Nama Pengantin Wanita", opts.data.nama_pengantin_wanita],
-    ["Orang Tua Pria", opts.data.nama_orang_tua_pria],
-    ["Orang Tua Wanita", opts.data.nama_orang_tua_wanita],
-    ["Wali", opts.data.nama_wali],
-    ["Saksi 1", opts.data.nama_saksi_1],
-    ["Saksi 2", opts.data.nama_saksi_2],
-    ["MC", opts.data.nama_MC],
-    ["Penghulu/Pemuka Agama", opts.data.nama_penghulu],
-    ["Lokasi Akad", opts.data.lokasi_akad],
-    ["Jam Akad", opts.data.jam_akad],
-    ["Lokasi Resepsi", opts.data.lokasi_resepsi],
-    ["Jam Resepsi", opts.data.jam_resepsi],
-    ["Adat/Konsep", opts.data.adat_konsep],
-    ["Warna Tema", opts.data.warna_tema],
-    ["Jumlah Tamu", String(opts.data.jumlah_tamu || "")],
-    ["Request Lagu", opts.data.request_lagu],
-    ["Request Makanan", opts.data.request_makanan],
-    ["Catatan Khusus", opts.data.catatan_khusus],
-    ["Susunan Acara", opts.data.susunan_acara],
-  ];
-
-  for (const [k, v] of lines) {
-    const val = (v || "—").toString();
-    const text = `${k}: ${val}`;
-    const wrapped = doc.splitTextToSize(text, 180);
-    doc.text(wrapped, marginX, y);
-    y += wrapped.length * 5 + 1;
-    if (y > 270) {
-      doc.addPage();
-      y = 14;
-    }
-  }
-
-  doc.save(`formulir-${String(opts.kode_booking || "").toLowerCase()}.pdf`);
+  await buildSimpleProfessionalPdf({
+    businessName: (opts as any).businessName || "Wedding Organizer",
+    title: "Formulir Digital Acara",
+    meta: [
+      { label: "Kode Booking", value: String(opts.kode_booking || "").toUpperCase() },
+      { label: "Tanggal Cetak", value: new Date().toISOString() },
+    ],
+    sections: [
+      {
+        title: "Data Acara",
+        fields: [
+          { label: "Nama Pengantin Pria", value: opts.data?.nama_pengantin_pria },
+          { label: "Nama Pengantin Wanita", value: opts.data?.nama_pengantin_wanita },
+          { label: "Orang Tua Pria", value: opts.data?.nama_orang_tua_pria },
+          { label: "Orang Tua Wanita", value: opts.data?.nama_orang_tua_wanita },
+          { label: "Wali", value: opts.data?.nama_wali },
+          { label: "Saksi 1", value: opts.data?.nama_saksi_1 },
+          { label: "Saksi 2", value: opts.data?.nama_saksi_2 },
+          { label: "MC", value: opts.data?.nama_MC },
+          { label: "Penghulu / Pemuka Agama", value: opts.data?.nama_penghulu },
+          { label: "Lokasi Akad", value: opts.data?.lokasi_akad },
+          { label: "Jam Akad", value: opts.data?.jam_akad },
+          { label: "Lokasi Resepsi", value: opts.data?.lokasi_resepsi },
+          { label: "Jam Resepsi", value: opts.data?.jam_resepsi },
+          { label: "Adat / Konsep", value: opts.data?.adat_konsep },
+          { label: "Warna Tema", value: opts.data?.warna_tema },
+          { label: "Jumlah Tamu", value: String(opts.data?.jumlah_tamu ?? "") },
+        ],
+      },
+      {
+        title: "Preferensi & Catatan",
+        fields: [
+          { label: "Request Lagu", value: opts.data?.request_lagu },
+          { label: "Request Makanan", value: opts.data?.request_makanan },
+          { label: "Catatan Khusus", value: opts.data?.catatan_khusus },
+          { label: "Susunan Acara / Rundown", value: opts.data?.susunan_acara },
+        ],
+      },
+    ],
+    filename: `formulir-${String(opts.kode_booking || "").toLowerCase()}.pdf`,
+  });
 }
 
 const kategoriJamPlaceholder = "contoh: 08:00";
 
 export default function DigitalForm() {
   const { user } = useAuth();
+  const { profile } = useSystemProfile();
   const bookings = useBookings();
   const booking = useMemo(() => bookings.find((b) => b.clientId === (user?.clientId || "")), [bookings, user?.clientId]);
   const kodeBooking = String(booking?.code || "");
@@ -152,7 +149,7 @@ export default function DigitalForm() {
             <Button
               variant="outline"
               disabled={!kodeBooking || loading}
-              onClick={() => exportFormToPdf({ kode_booking: kodeBooking, data: form })}
+              onClick={() => exportFormToPdf({ kode_booking: kodeBooking, data: form, businessName: profile?.nama_bisnis || "Wedding Organizer" } as any)}
             >
               <Download className="w-4 h-4 mr-1.5" /> Export PDF
             </Button>

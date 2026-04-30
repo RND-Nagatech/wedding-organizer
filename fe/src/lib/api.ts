@@ -648,6 +648,45 @@ export async function reportPayments(params?: { tgl_from?: string; tgl_to?: stri
   return res.json();
 }
 
+export async function reportVendorAvailability(params?: { tanggal?: string; kategori_vendor_id?: string }) {
+  const cleanParams: Record<string, string> = {};
+  if (params) {
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== "undefined" && String(v) !== "") cleanParams[k] = String(v);
+    });
+  }
+  const qs = Object.keys(cleanParams).length ? `?${new URLSearchParams(cleanParams).toString()}` : "";
+  const res = await fetch(`${API_BASE}/reports/vendors/availability${qs}`);
+  if (!res.ok) throw new Error("Gagal mengambil laporan vendor availability");
+  return res.json();
+}
+
+export async function reportVendorSchedule(params?: { vendor_id?: string; tgl_from?: string; tgl_to?: string }) {
+  const cleanParams: Record<string, string> = {};
+  if (params) {
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== "undefined" && String(v) !== "") cleanParams[k] = String(v);
+    });
+  }
+  const qs = Object.keys(cleanParams).length ? `?${new URLSearchParams(cleanParams).toString()}` : "";
+  const res = await fetch(`${API_BASE}/reports/vendors/schedule${qs}`);
+  if (!res.ok) throw new Error("Gagal mengambil jadwal vendor");
+  return res.json();
+}
+
+export async function reportVendorBookings(params?: { tgl_from?: string; tgl_to?: string; kategori_vendor_id?: string; vendor_id?: string }) {
+  const cleanParams: Record<string, string> = {};
+  if (params) {
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== "undefined" && String(v) !== "") cleanParams[k] = String(v);
+    });
+  }
+  const qs = Object.keys(cleanParams).length ? `?${new URLSearchParams(cleanParams).toString()}` : "";
+  const res = await fetch(`${API_BASE}/reports/vendors/bookings${qs}`);
+  if (!res.ok) throw new Error("Gagal mengambil laporan vendor booking");
+  return res.json();
+}
+
 export async function reportKeuanganDetail(params?: { tgl_from?: string; tgl_to?: string; kategori?: string }) {
   const cleanParams: Record<string, string> = {};
   if (params) {

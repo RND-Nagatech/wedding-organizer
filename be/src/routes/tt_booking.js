@@ -575,6 +575,7 @@ router.put("/:id", async (req, res) => {
       typeof biaya_tambahan !== "undefined" ||
       typeof diskon !== "undefined"
     ) {
+      booking.pricing_reviewed_at = new Date();
       const nextAddons = typeof addons !== "undefined" ? (Array.isArray(addons) ? addons : []) : booking.addons || [];
       const normalizedAddons = (nextAddons || [])
         .map((a) => {

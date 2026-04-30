@@ -14,6 +14,6 @@ export const PageHeader = ({
       <h1 className="font-display text-3xl sm:text-4xl text-foreground">{title}</h1>
       {subtitle && <p className="text-muted-foreground mt-1.5">{subtitle}</p>}
     </div>
-    {actions && <div className="flex gap-2">{actions}</div>}
+    {actions && <div className="flex flex-wrap gap-2 justify-start sm:justify-end">{actions}</div>}
   </div>
 );

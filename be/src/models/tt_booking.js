@@ -44,6 +44,7 @@ const TtBookingSchema = new mongoose.Schema({
   total_addons_final: { type: Number, default: 0 },
   total_estimasi: { type: Number, default: 0 },
   harga_final_booking: { type: Number, default: 0 },
+  pricing_reviewed_at: { type: Date },
   // preferensi katalog client (snapshot-friendly)
   preferensi_katalog: {
     baju_id: { type: mongoose.Schema.Types.ObjectId, ref: "tm_katalog_baju" },

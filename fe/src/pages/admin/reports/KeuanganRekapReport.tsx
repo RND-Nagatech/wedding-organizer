@@ -67,9 +67,9 @@ const KeuanganRekapReport = () => {
               <Label>Sampai</Label>
               <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
             </div>
-            <div className="flex gap-2 justify-end lg:col-span-2">
-              <Button variant="outline" onClick={load} disabled={loading}>
-                {loading ? "Memuat..." : "Filter"}
+            <div className="flex flex-wrap gap-2 justify-end lg:col-span-2">
+              <Button className="bg-primary hover:bg-primary/90" onClick={load} disabled={loading}>
+                {loading ? "Memuat..." : "Cari Data"}
               </Button>
               <Button
                 variant="outline"

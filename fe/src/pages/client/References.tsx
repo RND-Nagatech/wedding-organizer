@@ -86,7 +86,7 @@ function AddReferenceDialog({ trigger }: { trigger: React.ReactNode }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="font-display text-2xl">Upload Referensi</DialogTitle>
         </DialogHeader>
@@ -204,7 +204,7 @@ const ClientReferences = () => {
       />
 
       <Card className="border-border shadow-soft overflow-hidden">
-        <div className="p-4">
+        <div className="p-4 overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>

@@ -71,6 +71,7 @@ const adminNav: NavItem[] = [
     submenu: [
       { to: "/admin/reports/events", label: "Event", icon: BarChart3 },
       { to: "/admin/reports/payments", label: "Pembayaran", icon: BarChart3 },
+      { to: "/admin/reports/vendors", label: "Vendor", icon: BarChart3 },
       { to: "/admin/reports/keuangan-detail", label: "Keuangan Detail", icon: BarChart3 },
       { to: "/admin/reports/keuangan-rekap", label: "Keuangan Rekap", icon: BarChart3 },
     ],
@@ -267,7 +268,7 @@ export const AppLayout = ({ children }: { children: React.ReactNode }) => {
           </Button>
         </header>
 
-        <main className="flex-1 p-4 sm:p-6 lg:p-10">{children}</main>
+        <main className="flex-1 min-w-0 overflow-x-hidden p-4 sm:p-6 lg:p-10">{children}</main>
       </div>
     </div>
   );

@@ -35,62 +35,60 @@ import { toast } from "sonner";
 import { ArrowLeft, ExternalLink, FileText, Plus, Trash2, Pencil } from "lucide-react";
 import { statusLabel } from "@/lib/labels";
 import { RupiahInput } from "@/components/RupiahInput";
+import { useSystemProfile } from "@/contexts/SystemProfileContext";
+import { buildSimpleProfessionalPdf } from "@/lib/pdfTemplate";
 
 const API_ORIGIN = (import.meta.env.VITE_API_URL || "http://localhost:5001/api").replace(/\/api\/?$/, "");
 
 async function exportDigitalFormPdf(opts: { kode_booking: string; data: any }) {
-  const { default: jsPDF } = await import("jspdf");
-  const doc = new jsPDF({ orientation: "portrait" });
-  const marginX = 14;
-  let y = 14;
-  doc.setFontSize(14);
-  doc.text("Formulir Digital Acara", marginX, y);
-  y += 8;
-  doc.setFontSize(10);
-  doc.text(`Booking: ${String(opts.kode_booking || "").toUpperCase()}`, marginX, y);
-  y += 8;
-
-  const lines: Array<[string, string]> = [
-    ["Nama Pengantin Pria", opts.data?.nama_pengantin_pria],
-    ["Nama Pengantin Wanita", opts.data?.nama_pengantin_wanita],
-    ["Orang Tua Pria", opts.data?.nama_orang_tua_pria],
-    ["Orang Tua Wanita", opts.data?.nama_orang_tua_wanita],
-    ["Wali", opts.data?.nama_wali],
-    ["Saksi 1", opts.data?.nama_saksi_1],
-    ["Saksi 2", opts.data?.nama_saksi_2],
-    ["MC", opts.data?.nama_MC],
-    ["Penghulu/Pemuka Agama", opts.data?.nama_penghulu],
-    ["Lokasi Akad", opts.data?.lokasi_akad],
-    ["Jam Akad", opts.data?.jam_akad],
-    ["Lokasi Resepsi", opts.data?.lokasi_resepsi],
-    ["Jam Resepsi", opts.data?.jam_resepsi],
-    ["Adat/Konsep", opts.data?.adat_konsep],
-    ["Warna Tema", opts.data?.warna_tema],
-    ["Jumlah Tamu", String(opts.data?.jumlah_tamu ?? "")],
-    ["Request Lagu", opts.data?.request_lagu],
-    ["Request Makanan", opts.data?.request_makanan],
-    ["Susunan Acara", opts.data?.susunan_acara],
-    ["Catatan Khusus", opts.data?.catatan_khusus],
-  ];
-
-  for (const [k, v] of lines) {
-    const val = (v || "—").toString();
-    const text = `${k}: ${val}`;
-    const wrapped = doc.splitTextToSize(text, 180);
-    doc.text(wrapped, marginX, y);
-    y += wrapped.length * 5 + 1;
-    if (y > 270) {
-      doc.addPage();
-      y = 14;
-    }
-  }
-
-  doc.save(`formulir-${String(opts.kode_booking || "").toLowerCase()}.pdf`);
+  await buildSimpleProfessionalPdf({
+    businessName: (opts as any).businessName || "Wedding Organizer",
+    title: "Formulir",
+    subtitle: "Formulir Digital Acara",
+    meta: [
+      { label: "Kode Booking", value: String(opts.kode_booking || "").toUpperCase() },
+      { label: "Tanggal Cetak", value: new Date().toISOString() },
+    ],
+    sections: [
+      {
+        title: "Data Acara",
+        fields: [
+          { label: "Nama Pengantin Pria", value: opts.data?.nama_pengantin_pria },
+          { label: "Nama Pengantin Wanita", value: opts.data?.nama_pengantin_wanita },
+          { label: "Orang Tua Pria", value: opts.data?.nama_orang_tua_pria },
+          { label: "Orang Tua Wanita", value: opts.data?.nama_orang_tua_wanita },
+          { label: "Wali", value: opts.data?.nama_wali },
+          { label: "Saksi 1", value: opts.data?.nama_saksi_1 },
+          { label: "Saksi 2", value: opts.data?.nama_saksi_2 },
+          { label: "MC", value: opts.data?.nama_MC },
+          { label: "Penghulu / Pemuka Agama", value: opts.data?.nama_penghulu },
+          { label: "Lokasi Akad", value: opts.data?.lokasi_akad },
+          { label: "Jam Akad", value: opts.data?.jam_akad },
+          { label: "Lokasi Resepsi", value: opts.data?.lokasi_resepsi },
+          { label: "Jam Resepsi", value: opts.data?.jam_resepsi },
+          { label: "Adat / Konsep", value: opts.data?.adat_konsep },
+          { label: "Warna Tema", value: opts.data?.warna_tema },
+          { label: "Jumlah Tamu", value: String(opts.data?.jumlah_tamu ?? "") },
+        ],
+      },
+      {
+        title: "Preferensi & Catatan",
+        fields: [
+          { label: "Request Lagu", value: opts.data?.request_lagu },
+          { label: "Request Makanan", value: opts.data?.request_makanan },
+          { label: "Susunan Acara / Rundown", value: opts.data?.susunan_acara },
+          { label: "Catatan Khusus", value: opts.data?.catatan_khusus },
+        ],
+      },
+    ],
+    filename: `formulir-${String(opts.kode_booking || "").toLowerCase()}.pdf`,
+  });
 }
 
 export default function ProjectDetail() {
   const { id } = useParams();
   const nav = useNavigate();
+  const { profile } = useSystemProfile();
 
   const bookings = useBookings();
   const packages = usePackages();
@@ -175,6 +173,7 @@ export default function ProjectDetail() {
   const [jamSelesai, setJamSelesai] = useState<string>("");
   const [approving, setApproving] = useState(false);
   const [pricingSaving, setPricingSaving] = useState(false);
+  const [pricingEditMode, setPricingEditMode] = useState(false);
   const [pricing, setPricing] = useState<any>({
     hargaPaketFinal: 0,
     biayaTambahan: 0,
@@ -317,6 +316,18 @@ export default function ProjectDetail() {
       })),
     });
   }, [booking?.id, booking?.addons, booking?.hargaPaketFinal, booking?.biayaTambahan, booking?.diskon, booking?.packageSnapshot?.price, pkg?.price]);
+
+  const pricingSaved = useMemo(() => {
+    if (!booking) return false;
+    const st = String(booking.statusBooking || "menunggu_review");
+    if (["approved", "ongoing", "completed"].includes(st)) return true;
+    return Boolean((booking as any).pricingReviewedAt);
+  }, [booking?.id, booking?.statusBooking, (booking as any)?.pricingReviewedAt]);
+
+  useEffect(() => {
+    if (!booking) return;
+    setPricingEditMode(!pricingSaved);
+  }, [booking?.id, pricingSaved]);
 
   useEffect(() => {
     ambilKategoriVendor()
@@ -484,7 +495,7 @@ export default function ProjectDetail() {
       </div>
 
       <Tabs defaultValue="vendor" className="w-full">
-        <TabsList className="flex flex-wrap h-auto">
+        <TabsList className="flex w-full gap-2 overflow-x-auto flex-nowrap h-auto justify-start">
           <TabsTrigger value="vendor">Vendor Final</TabsTrigger>
           <TabsTrigger value="timeline">Timeline WO</TabsTrigger>
           <TabsTrigger value="preferences">Client Preference</TabsTrigger>
@@ -697,35 +708,38 @@ export default function ProjectDetail() {
         </TabsContent>
 
 	      <TabsContent value="preferences">
-	          <div className="grid gap-4 lg:grid-cols-2">
+	          <div className="grid gap-4 lg:grid-cols-1">
+              {/* NOTE: card Katalog Favorit Client di-hide sementara (favorit sudah terakomodir di thumbnail/preview lain). */}
+	            {/*
 	            <Card className="p-6 border-border shadow-soft space-y-3">
 	              <div className="font-medium">Katalog Favorit Client</div>
 	              <div className="text-sm text-muted-foreground">Favorit hanya sebagai referensi selera client (bukan pilihan final).</div>
-              <div className="grid sm:grid-cols-3 gap-3 text-sm">
-                <div className="rounded-md border border-border p-3">
-                  <div className="text-xs text-muted-foreground">Baju</div>
-                  <div className="font-medium mt-1">{favGroups.baju.length} item</div>
-                  <div className="text-xs text-muted-foreground mt-1 truncate">
-                    {favGroups.baju.slice(0, 2).map((x) => x.nama_baju).join(", ") || "—"}
+                <div className="grid sm:grid-cols-3 gap-3 text-sm">
+                  <div className="rounded-md border border-border p-3">
+                    <div className="text-xs text-muted-foreground">Baju</div>
+                    <div className="font-medium mt-1">{favGroups.baju.length} item</div>
+                    <div className="text-xs text-muted-foreground mt-1 truncate">
+                      {favGroups.baju.slice(0, 2).map((x) => x.nama_baju).join(", ") || "—"}
+                    </div>
+                  </div>
+                  <div className="rounded-md border border-border p-3">
+                    <div className="text-xs text-muted-foreground">Dekorasi</div>
+                    <div className="font-medium mt-1">{favGroups.dekorasi.length} item</div>
+                    <div className="text-xs text-muted-foreground mt-1 truncate">
+                      {favGroups.dekorasi.slice(0, 2).map((x) => x.nama_dekorasi).join(", ") || "—"}
+                    </div>
+                  </div>
+                  <div className="rounded-md border border-border p-3">
+                    <div className="text-xs text-muted-foreground">Makeup</div>
+                    <div className="font-medium mt-1">{favGroups.makeup.length} item</div>
+                    <div className="text-xs text-muted-foreground mt-1 truncate">
+                      {favGroups.makeup.slice(0, 2).map((x) => x.nama_style).join(", ") || "—"}
+                    </div>
                   </div>
                 </div>
-	                <div className="rounded-md border border-border p-3">
-	                  <div className="text-xs text-muted-foreground">Dekorasi</div>
-	                  <div className="font-medium mt-1">{favGroups.dekorasi.length} item</div>
-	                  <div className="text-xs text-muted-foreground mt-1 truncate">
-	                    {favGroups.dekorasi.slice(0, 2).map((x) => x.nama_dekorasi).join(", ") || "—"}
-	                  </div>
-	                </div>
-	                <div className="rounded-md border border-border p-3">
-	                  <div className="text-xs text-muted-foreground">Makeup</div>
-	                  <div className="font-medium mt-1">{favGroups.makeup.length} item</div>
-	                  <div className="text-xs text-muted-foreground mt-1 truncate">
-	                    {favGroups.makeup.slice(0, 2).map((x) => x.nama_style).join(", ") || "—"}
-	                  </div>
-	                </div>
-	              </div>
-              <div className="text-xs text-muted-foreground">Berikutnya: review referensi & wishlist client untuk finalisasi.</div>
-            </Card>
+                <div className="text-xs text-muted-foreground">Berikutnya: review referensi & wishlist client untuk finalisasi.</div>
+              </Card>
+              */}
 
             <Card className="p-6 border-border shadow-soft space-y-3">
               <div className="font-medium">Ringkasan</div>
@@ -1341,147 +1355,220 @@ export default function ProjectDetail() {
 
             <div className="rounded-lg border border-border p-4 bg-muted/10 space-y-3">
               <div>
-                <div className="font-medium">Review Harga</div>
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <div className="font-medium">Review Harga</div>
+                  {pricingSaved ? (
+                    <span className="text-xs px-2 py-1 rounded-full border border-success/30 text-success bg-success/5">Tersimpan</span>
+                  ) : (
+                    <span className="text-xs px-2 py-1 rounded-full border border-muted-foreground/20 text-muted-foreground bg-muted/20">Belum disimpan</span>
+                  )}
+                </div>
                 <div className="text-sm text-muted-foreground">
                   Harga paket di master adalah estimasi “mulai dari”. Harga final wajib direview WO sebelum approval.
                 </div>
               </div>
 
-              <div className="grid sm:grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label>Harga Paket (Estimasi)</Label>
-                  <div className="h-10 rounded-md border border-border px-3 flex items-center text-sm">
-                    {formatIDR(Number(booking.hargaPaketEstimasi || booking.packageSnapshot?.price || pkg?.price || 0))}
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Harga Paket Final</Label>
-                  <RupiahInput value={Number(pricing.hargaPaketFinal) || 0} onValueChange={(v) => setPricing((p: any) => ({ ...p, hargaPaketFinal: v }))} placeholder="Rp" />
-                </div>
-              </div>
+              {!pricingEditMode ? (
+                <>
+                  {(() => {
+                    const estimasi = Number(booking.hargaPaketEstimasi || booking.packageSnapshot?.price || pkg?.price || 0);
+                    const addonsFinal = (booking.addons || []).reduce((s: number, a: any) => s + (Number(a.qty) || 0) * (Number(a.harga_satuan_final) || 0), 0);
+                    const paketFinal = Number(booking.hargaPaketFinal || estimasi);
+                    const biayaTambahan = Number(booking.biayaTambahan || 0);
+                    const diskon = Number(booking.diskon || 0);
+                    const totalFinal = paketFinal + addonsFinal + biayaTambahan - diskon;
+                    return (
+                      <div className="grid gap-3">
+                        <div className="grid sm:grid-cols-2 gap-3">
+                          <div className="rounded-lg border border-border p-3 bg-background">
+                            <div className="text-xs text-muted-foreground">Harga Paket (Estimasi)</div>
+                            <div className="font-medium text-primary mt-1">{formatIDR(estimasi)}</div>
+                          </div>
+                          <div className="rounded-lg border border-border p-3 bg-background">
+                            <div className="text-xs text-muted-foreground">Harga Paket Final</div>
+                            <div className="font-medium mt-1">{formatIDR(paketFinal)}</div>
+                          </div>
+                        </div>
+                        <div className="rounded-lg border border-border p-3 text-sm space-y-1 bg-background">
+                          <div className="flex justify-between"><span className="text-muted-foreground">Total Add-ons Final</span><span className="font-medium">{formatIDR(addonsFinal)}</span></div>
+                          <div className="flex justify-between"><span className="text-muted-foreground">Biaya Tambahan</span><span className="font-medium">{formatIDR(biayaTambahan)}</span></div>
+                          <div className="flex justify-between"><span className="text-muted-foreground">Diskon</span><span className="font-medium">{formatIDR(diskon)}</span></div>
+                          <div className="flex justify-between pt-2 border-t border-border"><span className="text-muted-foreground">Harga Final Booking</span><span className="font-medium text-primary">{formatIDR(totalFinal)}</span></div>
+                        </div>
+                      </div>
+                    );
+                  })()}
 
-              <div className="space-y-2">
-                <div className="text-sm font-medium">Add-ons</div>
-                {pricing.addons.length === 0 ? (
-                  <div className="text-sm text-muted-foreground">Tidak ada add-ons dari client.</div>
-                ) : (
-                  <div className="rounded-lg border border-border overflow-hidden">
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead className="bg-muted/50">
-                          <tr>
-                            <th className="text-left px-3 py-2 font-medium">Add-on</th>
-                            <th className="text-right px-3 py-2 font-medium w-[110px]">Qty</th>
-                            <th className="text-right px-3 py-2 font-medium w-[170px]">Harga Default</th>
-                            <th className="text-right px-3 py-2 font-medium w-[170px]">Harga Final</th>
-                            <th className="text-right px-3 py-2 font-medium w-[170px]">Subtotal</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-border">
-                          {pricing.addons.map((a: any, idx: number) => {
-                            const qty = Number(a.qty) || 0;
-                            const hargaDefault = Number(a.harga_satuan_default) || 0;
-                            const hargaFinal = Number(a.harga_satuan_final) || 0;
-                            const subtotal = qty * hargaFinal;
-                            return (
-                              <tr key={String(a.addonId || idx)}>
-                                <td className="px-3 py-2">
-                                  <div className="font-medium">{a.nama_addon || "—"}</div>
-                                  <div className="text-xs text-muted-foreground">{a.kategori_addon || "—"}</div>
-                                </td>
-                                <td className="px-3 py-2 text-right">
-                                  <Input
-                                    type="number"
-                                    min={0}
-                                    value={qty || ""}
-                                    onChange={(e) => {
-                                      const nextQty = Math.max(0, Math.floor(Number(e.target.value || 0)));
-                                      setPricing((p: any) => ({
-                                        ...p,
-                                        addons: p.addons.map((x: any, i: number) => (i === idx ? { ...x, qty: nextQty } : x)),
-                                      }));
-                                    }}
-                                  />
-                                </td>
-                                <td className="px-3 py-2 text-right">{formatIDR(hargaDefault)}</td>
-                                <td className="px-3 py-2 text-right">
-                                  <RupiahInput
-                                    value={hargaFinal}
-                                    onValueChange={(v) =>
-                                      setPricing((p: any) => ({
-                                        ...p,
-                                        addons: p.addons.map((x: any, i: number) => (i === idx ? { ...x, harga_satuan_final: v } : x)),
-                                      }))
-                                    }
-                                    placeholder="Rp"
-                                  />
-                                </td>
-                                <td className="px-3 py-2 text-right font-medium text-primary">{formatIDR(subtotal)}</td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
+                  <div className="flex items-center justify-end gap-2">
+                    <Button variant="outline" onClick={() => setPricingEditMode(true)}>Edit Review Harga</Button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="grid sm:grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label>Harga Paket (Estimasi)</Label>
+                      <div className="h-10 rounded-md border border-border px-3 flex items-center text-sm bg-background">
+                        {formatIDR(Number(booking.hargaPaketEstimasi || booking.packageSnapshot?.price || pkg?.price || 0))}
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Harga Paket Final</Label>
+                      <RupiahInput value={Number(pricing.hargaPaketFinal) || 0} onValueChange={(v) => setPricing((p: any) => ({ ...p, hargaPaketFinal: v }))} placeholder="Rp" />
                     </div>
                   </div>
-                )}
-              </div>
 
-              <div className="grid sm:grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label>Biaya Tambahan</Label>
-                  <RupiahInput value={Number(pricing.biayaTambahan) || 0} onValueChange={(v) => setPricing((p: any) => ({ ...p, biayaTambahan: v }))} placeholder="Rp" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Diskon</Label>
-                  <RupiahInput value={Number(pricing.diskon) || 0} onValueChange={(v) => setPricing((p: any) => ({ ...p, diskon: v }))} placeholder="Rp" />
-                </div>
-              </div>
-
-              {(() => {
-                const addonsFinal = (pricing.addons || []).reduce((s: number, a: any) => s + (Number(a.qty) || 0) * (Number(a.harga_satuan_final) || 0), 0);
-                const hargaFinalBooking = (Number(pricing.hargaPaketFinal) || 0) + addonsFinal + (Number(pricing.biayaTambahan) || 0) - (Number(pricing.diskon) || 0);
-                return (
-                  <div className="rounded-lg border border-border p-3 text-sm space-y-1 bg-background">
-                    <div className="flex justify-between"><span className="text-muted-foreground">Total Add-ons Final</span><span className="font-medium">{formatIDR(addonsFinal)}</span></div>
-                    <div className="flex justify-between"><span className="text-muted-foreground">Harga Final Booking</span><span className="font-medium text-primary">{formatIDR(hargaFinalBooking)}</span></div>
+                  <div className="space-y-2">
+                    <div className="text-sm font-medium">Add-ons</div>
+                    {pricing.addons.length === 0 ? (
+                      <div className="text-sm text-muted-foreground">Tidak ada add-ons dari client.</div>
+                    ) : (
+                      <div className="rounded-lg border border-border overflow-hidden bg-background">
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-sm">
+                            <thead className="bg-muted/50">
+                              <tr>
+                                <th className="text-left px-3 py-2 font-medium">Add-on</th>
+                                <th className="text-right px-3 py-2 font-medium w-[110px]">Qty</th>
+                                <th className="text-right px-3 py-2 font-medium w-[170px]">Harga Default</th>
+                                <th className="text-right px-3 py-2 font-medium w-[170px]">Harga Final</th>
+                                <th className="text-right px-3 py-2 font-medium w-[170px]">Subtotal</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-border">
+                              {pricing.addons.map((a: any, idx: number) => {
+                                const qty = Number(a.qty) || 0;
+                                const hargaDefault = Number(a.harga_satuan_default) || 0;
+                                const hargaFinal = Number(a.harga_satuan_final) || 0;
+                                const subtotal = qty * hargaFinal;
+                                return (
+                                  <tr key={String(a.addonId || idx)}>
+                                    <td className="px-3 py-2">
+                                      <div className="font-medium">{a.nama_addon || "—"}</div>
+                                      <div className="text-xs text-muted-foreground">{a.kategori_addon || "—"}</div>
+                                    </td>
+                                    <td className="px-3 py-2 text-right">
+                                      <Input
+                                        type="number"
+                                        min={0}
+                                        value={qty || ""}
+                                        onChange={(e) => {
+                                          const nextQty = Math.max(0, Math.floor(Number(e.target.value || 0)));
+                                          setPricing((p: any) => ({
+                                            ...p,
+                                            addons: p.addons.map((x: any, i: number) => (i === idx ? { ...x, qty: nextQty } : x)),
+                                          }));
+                                        }}
+                                      />
+                                    </td>
+                                    <td className="px-3 py-2 text-right">{formatIDR(hargaDefault)}</td>
+                                    <td className="px-3 py-2 text-right">
+                                      <RupiahInput
+                                        value={hargaFinal}
+                                        onValueChange={(v) =>
+                                          setPricing((p: any) => ({
+                                            ...p,
+                                            addons: p.addons.map((x: any, i: number) => (i === idx ? { ...x, harga_satuan_final: v } : x)),
+                                          }))
+                                        }
+                                        placeholder="Rp"
+                                      />
+                                    </td>
+                                    <td className="px-3 py-2 text-right font-medium text-primary">{formatIDR(subtotal)}</td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                );
-              })()}
 
-              <div className="flex items-center justify-end gap-2">
-                <Button
-                  variant="outline"
-                  disabled={pricingSaving}
-                  onClick={async () => {
-                    try {
-                      setPricingSaving(true);
-                      await store.updateBookingPricing(booking.id, {
-                        harga_paket_final: Number(pricing.hargaPaketFinal) || 0,
-                        biaya_tambahan: Number(pricing.biayaTambahan) || 0,
-                        diskon: Number(pricing.diskon) || 0,
-                        addons: (pricing.addons || []).map((a: any) => ({
-                          addonId: a.addonId,
-                          nama_addon: a.nama_addon,
-                          kategori_addon: a.kategori_addon,
-                          deskripsi: a.deskripsi,
-                          satuan: a.satuan,
-                          qty: Number(a.qty) || 0,
-                          harga_satuan_default: Number(a.harga_satuan_default) || 0,
-                          harga_satuan_final: Number(a.harga_satuan_final) || 0,
-                        })),
-                      });
-                      toast.success("Review harga tersimpan");
-                    } catch (err: any) {
-                      toast.error(err?.message || "Gagal menyimpan review harga");
-                    } finally {
-                      setPricingSaving(false);
-                    }
-                  }}
-                >
-                  {pricingSaving ? "Menyimpan..." : "Simpan Review Harga"}
-                </Button>
-              </div>
+                  <div className="grid sm:grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label>Biaya Tambahan</Label>
+                      <RupiahInput value={Number(pricing.biayaTambahan) || 0} onValueChange={(v) => setPricing((p: any) => ({ ...p, biayaTambahan: v }))} placeholder="Rp" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Diskon</Label>
+                      <RupiahInput value={Number(pricing.diskon) || 0} onValueChange={(v) => setPricing((p: any) => ({ ...p, diskon: v }))} placeholder="Rp" />
+                    </div>
+                  </div>
+
+                  {(() => {
+                    const addonsFinal = (pricing.addons || []).reduce((s: number, a: any) => s + (Number(a.qty) || 0) * (Number(a.harga_satuan_final) || 0), 0);
+                    const hargaFinalBooking = (Number(pricing.hargaPaketFinal) || 0) + addonsFinal + (Number(pricing.biayaTambahan) || 0) - (Number(pricing.diskon) || 0);
+                    return (
+                      <div className="rounded-lg border border-border p-3 text-sm space-y-1 bg-background">
+                        <div className="flex justify-between"><span className="text-muted-foreground">Total Add-ons Final</span><span className="font-medium">{formatIDR(addonsFinal)}</span></div>
+                        <div className="flex justify-between"><span className="text-muted-foreground">Harga Final Booking</span><span className="font-medium text-primary">{formatIDR(hargaFinalBooking)}</span></div>
+                      </div>
+                    );
+                  })()}
+
+                  <div className="flex items-center justify-end gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={pricingSaving}
+                      onClick={() => {
+                        if (!booking) return;
+                        setPricing({
+                          hargaPaketFinal: Number(booking.hargaPaketFinal || booking.packageSnapshot?.price || pkg?.price || 0),
+                          biayaTambahan: Number(booking.biayaTambahan || 0),
+                          diskon: Number(booking.diskon || 0),
+                          addons: (booking.addons || []).map((a: any) => ({
+                            addonId: a.addonId,
+                            nama_addon: a.nama_addon,
+                            kategori_addon: a.kategori_addon,
+                            deskripsi: a.deskripsi,
+                            satuan: a.satuan,
+                            qty: Number(a.qty) || 0,
+                            harga_satuan_default: Number(a.harga_satuan_default) || 0,
+                            harga_satuan_final: Number(a.harga_satuan_final) || Number(a.harga_satuan_default) || 0,
+                          })),
+                        });
+                        setPricingEditMode(false);
+                      }}
+                    >
+                      Batal
+                    </Button>
+                    <Button
+                      variant="outline"
+                      disabled={pricingSaving}
+                      onClick={async () => {
+                        try {
+                          setPricingSaving(true);
+                          await store.updateBookingPricing(booking.id, {
+                            harga_paket_final: Number(pricing.hargaPaketFinal) || 0,
+                            biaya_tambahan: Number(pricing.biayaTambahan) || 0,
+                            diskon: Number(pricing.diskon) || 0,
+                            addons: (pricing.addons || []).map((a: any) => ({
+                              addonId: a.addonId,
+                              nama_addon: a.nama_addon,
+                              kategori_addon: a.kategori_addon,
+                              deskripsi: a.deskripsi,
+                              satuan: a.satuan,
+                              qty: Number(a.qty) || 0,
+                              harga_satuan_default: Number(a.harga_satuan_default) || 0,
+                              harga_satuan_final: Number(a.harga_satuan_final) || 0,
+                            })),
+                          });
+                          toast.success("Review harga tersimpan");
+                          setPricingEditMode(false);
+                        } catch (err: any) {
+                          toast.error(err?.message || "Gagal menyimpan review harga");
+                        } finally {
+                          setPricingSaving(false);
+                        }
+                      }}
+                    >
+                      {pricingSaving ? "Menyimpan..." : "Simpan Review Harga"}
+                    </Button>
+                  </div>
+                </>
+              )}
             </div>
 
             {(booking.statusBooking || "menunggu_review") === "menunggu_review" ? (
@@ -2162,13 +2249,13 @@ export default function ProjectDetail() {
             )}
 
             <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                disabled={!digitalForm}
-                onClick={() => exportDigitalFormPdf({ kode_booking: kodeBooking, data: digitalForm })}
-              >
-                <FileText className="w-4 h-4 mr-1.5" /> Export PDF
-              </Button>
+                  <Button
+                    variant="outline"
+                    disabled={!digitalForm}
+                    onClick={() => exportDigitalFormPdf({ kode_booking: kodeBooking, data: digitalForm, businessName: profile?.nama_bisnis || "Wedding Organizer" } as any)}
+                  >
+                    <FileText className="w-4 h-4 mr-1.5" /> Export PDF
+                  </Button>
               <Button asChild variant="outline">
                 <Link to="/admin/bookings">Buka Booking</Link>
               </Button>

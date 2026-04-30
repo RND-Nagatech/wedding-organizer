@@ -151,7 +151,6 @@ const ClientBooking = () => {
               const next: Record<string, string> = {};
               if (!form.eventDate) next.eventDate = "Tanggal acara wajib diisi";
               if (!form.venue) next.venue = "Lokasi acara wajib diisi";
-              if (form.adatId === sentinelNone) next.adatId = "Adat/konsep wajib dipilih";
               setErrors(next);
               if (Object.keys(next).length) {
                 toast.error("Lengkapi field yang wajib diisi");
@@ -255,15 +254,14 @@ const ClientBooking = () => {
             <div className="space-y-1.5">
               <Label>Adat / Konsep</Label>
               <Select value={form.adatId} onValueChange={(v) => setForm((f) => ({ ...f, adatId: v }))}>
-                <SelectTrigger><SelectValue placeholder="Pilih adat/konsep" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="(Opsional) Pilih adat/konsep" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={sentinelNone} disabled>Pilih adat/konsep</SelectItem>
+                  <SelectItem value={sentinelNone}>— (Opsional)</SelectItem>
                   {adat.filter((a) => a.status === "aktif").map((a) => (
                     <SelectItem key={a.id} value={String(a.id)}>{a.nama_adat}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              {errors.adatId ? <div className="text-xs text-destructive">{errors.adatId}</div> : null}
             </div>
 
             <div className="rounded-lg border border-border p-4 bg-muted/10">

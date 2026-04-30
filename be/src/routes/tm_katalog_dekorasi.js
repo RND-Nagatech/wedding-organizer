@@ -16,7 +16,6 @@ router.post("/", async (req, res) => {
   try {
     const { nama_dekorasi, adat_id } = req.body || {};
     if (!nama_dekorasi) return res.status(400).json({ pesan: "nama_dekorasi wajib diisi" });
-    if (!adat_id) return res.status(400).json({ pesan: "adat_id wajib diisi" });
 
     const data = await TmKatalogDekorasi.create(req.body);
     res.status(201).json(data);
@@ -46,4 +45,3 @@ router.delete("/:id", async (req, res) => {
 });
 
 export default router;
-
