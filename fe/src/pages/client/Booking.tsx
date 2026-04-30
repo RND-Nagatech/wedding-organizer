@@ -376,7 +376,7 @@ const ClientBooking = () => {
             <h2 className="font-display text-3xl mt-1">{activeBooking.clientName || client?.name} </h2>
           </div>
           <div className="flex items-center gap-2">
-            <StatusBadge status={activeBooking.statusBooking || "menunggu_review"} />
+            {/* <StatusBadge status={activeBooking.statusBooking || "menunggu_review"} /> */}
             <div className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1 text-xs bg-background">
               <BadgeCheck className="w-3.5 h-3.5 text-primary" /> {statusLabel(activeBooking.statusBooking || "menunggu_review")}
             </div>
