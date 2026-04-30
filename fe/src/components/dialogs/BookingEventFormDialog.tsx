@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { store, useAdat, useClients, usePackages, useVendors } from "@/lib/dataStore";
+import { store, useAdat, useAddons, useClients, usePackages, useVendors } from "@/lib/dataStore";
 import { toast } from "sonner";
 import { formatIDR } from "@/lib/mockData";
 import type { Booking } from "@/lib/mockData";
@@ -23,6 +23,7 @@ export function BookingEventFormDialog(props: {
   const packages = usePackages();
   const adat = useAdat();
   const vendors = useVendors();
+  const addons = useAddons();
 
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -43,6 +44,7 @@ export function BookingEventFormDialog(props: {
     pic: "",
     eventStatus: "draft" as "draft" | "aktif" | "selesai" | "batal",
     note: "",
+    addonsQty: {} as Record<string, number>,
   });
 
   useEffect(() => {
@@ -60,6 +62,11 @@ export function BookingEventFormDialog(props: {
       pic: initial?.pic ?? "",
       eventStatus: initial?.eventStatus ?? "draft",
       note: initial?.note ?? "",
+      addonsQty: Object.fromEntries(
+        (initial?.addons || [])
+          .map((a: any) => [String(a.addonId || a.addon_id || a.id || ""), Number(a.qty || 0)])
+          .filter(([id]) => Boolean(id))
+      ),
     });
     setSelectedVendorIds(initial?.vendorSelectedIds ?? []);
   }, [open, initial, clients, packages, adat]);
@@ -133,6 +140,9 @@ export function BookingEventFormDialog(props: {
 
     try {
       setSaving(true);
+      const pickedAddons = Object.entries(form.addonsQty || {})
+        .map(([addonId, qty]) => ({ addonId, qty: Math.max(0, Math.floor(Number(qty || 0))) }))
+        .filter((x) => x.addonId && x.qty > 0);
       if (mode === "add") {
         await store.addEventBooking({
           clientId: form.clientId,
@@ -144,6 +154,7 @@ export function BookingEventFormDialog(props: {
           eventStatus: form.eventStatus,
           note: form.note || undefined,
           vendorSelectedIds: selectedVendorIds,
+          addons: pickedAddons,
         });
         toast.success("Booking/event berhasil dibuat");
       } else if (initial?.id) {
@@ -279,6 +290,57 @@ export function BookingEventFormDialog(props: {
               <Label>Lokasi Acara</Label>
               <Input value={form.venue} onChange={(e) => setForm((f) => ({ ...f, venue: e.target.value }))} disabled={saving} placeholder="Lokasi acara" />
               {errors.venue ? <div className="text-xs text-destructive">{errors.venue}</div> : null}
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-border p-4 bg-muted/10 space-y-3">
+            <div className="flex items-start justify-between gap-3 flex-wrap">
+              <div>
+                <div className="text-xs uppercase tracking-wider text-muted-foreground">Add-ons (Opsional)</div>
+                <div className="text-sm text-muted-foreground">
+                  Add-ons bersifat estimasi. Harga final tetap direview WO saat approval.
+                </div>
+              </div>
+            </div>
+            <div className="space-y-2">
+              {addons.filter((a) => a.status === "aktif").length === 0 ? (
+                <div className="text-sm text-muted-foreground">Belum ada master add-ons aktif.</div>
+              ) : (
+                addons
+                  .filter((a) => a.status === "aktif")
+                  .map((a) => {
+                    const qty = Number(form.addonsQty?.[a.id] || 0);
+                    return (
+                      <div key={a.id} className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center rounded-md border border-border px-3 py-2">
+                        <div className="sm:col-span-7 min-w-0">
+                          <div className="text-sm font-medium truncate">{a.nama_addon}</div>
+                          <div className="text-xs text-muted-foreground truncate">
+                            {a.kategori_addon ? `${a.kategori_addon} · ` : ""}{a.satuan ? `${a.satuan} · ` : ""}Default: {formatIDR(a.harga_satuan_default || 0)}
+                          </div>
+                        </div>
+                        <div className="sm:col-span-3">
+                          <Input
+                            type="number"
+                            min={0}
+                            value={qty || ""}
+                            onChange={(e) => {
+                              const nextQty = Math.max(0, Math.floor(Number(e.target.value || 0)));
+                              setForm((f) => ({
+                                ...f,
+                                addonsQty: { ...(f.addonsQty || {}), [a.id]: nextQty },
+                              }));
+                            }}
+                            placeholder="Qty"
+                            disabled={saving}
+                          />
+                        </div>
+                        <div className="sm:col-span-2 text-right text-sm font-medium text-primary">
+                          {formatIDR((a.harga_satuan_default || 0) * (qty || 0))}
+                        </div>
+                      </div>
+                    );
+                  })
+              )}
             </div>
           </div>
 

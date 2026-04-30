@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { statusLabel } from "@/lib/labels";
+import { BookingSelect } from "@/components/BookingSelect";
 
 const kategoriOptions: ClientWishlist["kategori"][] = ["baju", "dekorasi", "makeup", "aksesori", "rundown", "makanan", "lainnya"];
 const prioritasOptions: ClientWishlist["prioritas"][] = ["rendah", "sedang", "tinggi"];
@@ -29,7 +30,19 @@ function WishlistFormDialog({
 }) {
   const bookings = useBookings();
   const bookingOptions = useMemo(
-    () => bookings.map((b) => ({ code: b.code || "", label: `${(b.code || "").toUpperCase()} · ${b.clientName || "—"}` })).filter((x) => x.code),
+    () =>
+      bookings
+        .map((b) => {
+          const date = String(b.eventDate || "");
+          const clientName = String(b.clientName || "—");
+          const code = String(b.code || "");
+          return {
+            code,
+            label: `${code.toUpperCase()} · ${clientName} · ${date}`,
+            searchText: `${code} ${clientName} ${date}`,
+          };
+        })
+        .filter((x) => x.code),
     [bookings]
   );
 
@@ -50,7 +63,7 @@ function WishlistFormDialog({
     if (!open) return;
     setErrors({});
     setForm({
-      kode_booking: initial?.kode_booking ?? (bookingOptions[0]?.code ?? ""),
+      kode_booking: initial?.kode_booking ?? "",
       kategori: initial?.kategori ?? "rundown",
       permintaan: initial?.permintaan ?? "",
       prioritas: initial?.prioritas ?? "sedang",
@@ -112,16 +125,12 @@ function WishlistFormDialog({
           <div className="grid sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>Booking</Label>
-              <Select value={form.kode_booking} onValueChange={(v) => setForm((f: any) => ({ ...f, kode_booking: v }))}>
-                <SelectTrigger><SelectValue placeholder="Pilih booking" /></SelectTrigger>
-                <SelectContent>
-                  {bookingOptions.map((b) => (
-                    <SelectItem key={b.code} value={b.code}>
-                      {b.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <BookingSelect
+                value={form.kode_booking}
+                onValueChange={(v) => setForm((f: any) => ({ ...f, kode_booking: v }))}
+                options={bookingOptions as any}
+                placeholder="Pilih Booking"
+              />
               {errors.kode_booking ? <div className="text-xs text-destructive">{errors.kode_booking}</div> : null}
             </div>
             <div className="space-y-1.5">

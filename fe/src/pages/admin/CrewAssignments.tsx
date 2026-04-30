@@ -13,6 +13,8 @@ import { toast } from "sonner";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { formatDate } from "@/lib/mockData";
+import { BookingSelect } from "@/components/BookingSelect";
+import { statusLabel } from "@/lib/labels";
 
 const roleOptions: CrewAssignment["role"][] = ["leader", "runner", "wardrobe", "makeup_assistant", "dokumentasi", "konsumsi", "transport", "lainnya"];
 const hadirOptions: CrewAssignment["status_hadir"][] = ["belum_hadir", "hadir", "izin", "tidak_hadir"];
@@ -30,7 +32,11 @@ function CrewFormDialog({
   const bookingOptions = useMemo(
     () =>
       bookings
-        .map((b) => ({ code: b.code || "", label: `${(b.code || "").toUpperCase()} · ${b.clientName || "—"} · ${formatDate(b.eventDate)}` }))
+        .map((b) => ({
+          code: b.code || "",
+          label: `${(b.code || "").toUpperCase()} · ${b.clientName || "—"} · ${String(b.eventDate || "")}`,
+          searchText: `${b.code || ""} ${b.clientName || ""} ${String(b.eventDate || "")}`,
+        }))
         .filter((x) => x.code),
     [bookings]
   );
@@ -54,7 +60,7 @@ function CrewFormDialog({
     if (!open) return;
     setErrors({});
     setForm({
-      kode_booking: initial?.kode_booking ?? (bookingOptions[0]?.code ?? ""),
+      kode_booking: initial?.kode_booking ?? "",
       nama_crew: initial?.nama_crew ?? "",
       role: initial?.role ?? "runner",
       tanggal_tugas: initial?.tanggal_tugas ?? "",
@@ -121,16 +127,12 @@ function CrewFormDialog({
           <div className="grid sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>Booking</Label>
-              <Select value={form.kode_booking} onValueChange={(v) => setForm((f: any) => ({ ...f, kode_booking: v }))}>
-                <SelectTrigger><SelectValue placeholder="Pilih booking" /></SelectTrigger>
-                <SelectContent>
-                  {bookingOptions.map((b) => (
-                    <SelectItem key={b.code} value={b.code}>
-                      {b.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <BookingSelect
+                value={form.kode_booking}
+                onValueChange={(v) => setForm((f: any) => ({ ...f, kode_booking: v }))}
+                options={bookingOptions as any}
+                placeholder="Pilih Booking"
+              />
               {errors.kode_booking ? <div className="text-xs text-destructive">{errors.kode_booking}</div> : null}
             </div>
             <div className="space-y-1.5">
@@ -139,7 +141,7 @@ function CrewFormDialog({
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {hadirOptions.map((s) => (
-                    <SelectItem key={s} value={s}>{s.replaceAll("_", " ")}</SelectItem>
+                    <SelectItem key={s} value={s}>{statusLabel(String(s))}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -411,4 +413,3 @@ const CrewAssignmentsPage = () => {
 };
 
 export default CrewAssignmentsPage;
-

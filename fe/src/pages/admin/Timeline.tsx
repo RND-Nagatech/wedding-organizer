@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { statusLabel } from "@/lib/labels";
+import { BookingSelect } from "@/components/BookingSelect";
 
 function TaskFormDialog({
   mode,
@@ -32,7 +33,8 @@ function TaskFormDialog({
       bookings
         .map((b) => ({
           code: b.code || "",
-          label: `${(b.code || "").toUpperCase()} · ${b.clientName || "—"}`,
+          label: `${(b.code || "").toUpperCase()} · ${b.clientName || "—"} · ${String(b.eventDate || "")}`,
+          searchText: `${b.code || ""} ${b.clientName || ""} ${String(b.eventDate || "")}`,
         }))
         .filter((x) => x.code),
     [bookings]
@@ -55,7 +57,7 @@ function TaskFormDialog({
     if (!open) return;
     setErrors({});
     setForm({
-      kode_booking: fixedKodeBooking || initial?.kode_booking || bookingOptions[0]?.code || "",
+      kode_booking: fixedKodeBooking || initial?.kode_booking || "",
       nama_tugas: initial?.nama_tugas || "",
       kategori_tugas: initial?.kategori_tugas || "",
       deadline: initial?.deadline || "",
@@ -116,20 +118,13 @@ function TaskFormDialog({
           <div className="grid sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>Booking</Label>
-              <Select
+              <BookingSelect
                 value={form.kode_booking}
                 onValueChange={(v) => setForm((f: any) => ({ ...f, kode_booking: v }))}
+                options={bookingOptions as any}
+                placeholder="Pilih Booking"
                 disabled={saving || Boolean(fixedKodeBooking)}
-              >
-                <SelectTrigger><SelectValue placeholder="Pilih booking" /></SelectTrigger>
-                <SelectContent>
-                  {bookingOptions.map((b) => (
-                    <SelectItem key={b.code} value={b.code}>
-                      {b.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              />
               {errors.kode_booking ? <div className="text-xs text-destructive">{errors.kode_booking}</div> : null}
             </div>
             <div className="space-y-1.5">

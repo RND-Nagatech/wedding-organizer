@@ -20,14 +20,21 @@ export default function Projects() {
   const [q, setQ] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
-  const [statusBooking, setStatusBooking] = useState<string>(() => searchParams.get("status") || "all");
+  const [statusBooking, setStatusBooking] = useState<string>(() => searchParams.get("status") || "aktif");
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(10);
 
   const filteredRows = useMemo(() => {
     return bookings
       .filter((b) => {
-        if (statusBooking !== "all" && String(b.statusBooking || "menunggu_review") !== statusBooking) return false;
+        const st = String(b.statusBooking || "menunggu_review");
+        if (statusBooking !== "all") {
+          if (statusBooking === "aktif") {
+            if (!["menunggu_review", "approved", "ongoing"].includes(st)) return false;
+          } else {
+            if (st !== statusBooking) return false;
+          }
+        }
         if (dateFrom && String(b.eventDate || "") < dateFrom) return false;
         if (dateTo && String(b.eventDate || "") > dateTo) return false;
         if (q.trim()) {
@@ -38,7 +45,8 @@ export default function Projects() {
         }
         return true;
       })
-      .sort((a, b) => String(a.eventDate || "").localeCompare(String(b.eventDate || "")));
+      // ascending by kode_booking
+      .sort((a, b) => String(a.code || a.id || "").localeCompare(String(b.code || b.id || "")));
   }, [bookings, packages, q, dateFrom, dateTo, statusBooking]);
 
   const totalPages = Math.ceil(filteredRows.length / perPage);
@@ -73,6 +81,7 @@ export default function Projects() {
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Semua</SelectItem>
+                  <SelectItem value="aktif">Aktif</SelectItem>
                   <SelectItem value="draft">{statusLabel("draft")}</SelectItem>
                   <SelectItem value="menunggu_review">{statusLabel("menunggu_review")}</SelectItem>
                   <SelectItem value="approved">{statusLabel("approved")}</SelectItem>

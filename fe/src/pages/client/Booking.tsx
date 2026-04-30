@@ -218,15 +218,15 @@ const ClientBooking = () => {
                       .map((a) => {
                         const qty = Number(form.addonsQty?.[a.id] || 0);
                         return (
-                          <div key={a.id} className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center rounded-md border border-border px-3 py-2">
-                            <div className="sm:col-span-7 min-w-0">
-                              <div className="text-sm font-medium truncate">{a.nama_addon}</div>
-                              <div className="text-xs text-muted-foreground truncate">
-                                {a.kategori_addon ? `${a.kategori_addon} · ` : ""}Default: {formatIDR(a.harga_satuan_default || 0)}
+                            <div key={a.id} className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center rounded-md border border-border px-3 py-2">
+                              <div className="sm:col-span-7 min-w-0">
+                                <div className="text-sm font-medium truncate">{a.nama_addon}</div>
+                                <div className="text-xs text-muted-foreground truncate">
+                                {a.kategori_addon ? `${a.kategori_addon} · ` : ""}{a.satuan ? `${a.satuan} · ` : ""}Default: {formatIDR(a.harga_satuan_default || 0)}
+                                </div>
                               </div>
-                            </div>
-                            <div className="sm:col-span-3">
-                              <Input
+                              <div className="sm:col-span-3">
+                                <Input
                                 type="number"
                                 min={0}
                                 value={qty || ""}
@@ -412,6 +412,48 @@ const ClientBooking = () => {
             </li>
           ))}
         </ul>
+      </Card>
+
+      <Card className="p-6 border-border shadow-soft mt-6">
+        <div className="text-[11px] uppercase tracking-[0.2em] text-accent font-medium">Add-ons</div>
+        <div className="mt-3 rounded-lg border border-border overflow-hidden">
+          <div className="p-3 overflow-x-auto">
+            {(activeBooking.addons || []).length === 0 ? (
+              <div className="text-sm text-muted-foreground">Tidak ada add-ons.</div>
+            ) : (
+              <table className="w-full text-sm">
+                <thead className="bg-muted/30 text-xs uppercase tracking-wider text-muted-foreground">
+                  <tr>
+                    <th className="text-left px-3 py-2 font-medium">Add-on</th>
+                    <th className="text-left px-3 py-2 font-medium">Satuan</th>
+                    <th className="text-right px-3 py-2 font-medium">Qty</th>
+                    <th className="text-right px-3 py-2 font-medium">Harga</th>
+                    <th className="text-right px-3 py-2 font-medium">Subtotal</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {(activeBooking.addons || []).map((a, idx) => {
+                    const qty = Number(a.qty || 0) || 0;
+                    const harga = Number(a.harga_satuan_default || 0) || 0;
+                    const subtotal = Number(a.subtotal_default) || qty * harga;
+                    return (
+                      <tr key={`${a.addonId || a.nama_addon}-${idx}`}>
+                        <td className="px-3 py-2">
+                          <div className="font-medium">{a.nama_addon}</div>
+                          {a.kategori_addon ? <div className="text-xs text-muted-foreground">{a.kategori_addon}</div> : null}
+                        </td>
+                        <td className="px-3 py-2">{a.satuan || "—"}</td>
+                        <td className="px-3 py-2 text-right">{qty}</td>
+                        <td className="px-3 py-2 text-right">{formatIDR(harga)}</td>
+                        <td className="px-3 py-2 text-right font-medium text-primary">{formatIDR(subtotal)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
       </Card>
 
       {/* Favorit katalog tidak ditampilkan di card booking */}

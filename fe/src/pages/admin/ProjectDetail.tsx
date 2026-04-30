@@ -1832,7 +1832,7 @@ export default function ProjectDetail() {
                       <TableCell>{c.role}</TableCell>
                       <TableCell>{formatDate(c.tanggal_tugas)}</TableCell>
                       <TableCell>{c.jam_mulai && c.jam_selesai ? `${c.jam_mulai}–${c.jam_selesai}` : "—"}</TableCell>
-                      <TableCell>{c.status_hadir}</TableCell>
+                      <TableCell>{statusLabel(String(c.status_hadir || ""))}</TableCell>
                       <TableCell className="text-right">
                         <div className="inline-flex gap-2">
                           <Button

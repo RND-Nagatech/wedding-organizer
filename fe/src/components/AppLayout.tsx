@@ -180,7 +180,7 @@ export const AppLayout = ({ children }: { children: React.ReactNode }) => {
                       "flex items-center gap-3 px-3 py-2.5 rounded-lg w-full text-sm font-medium transition-smooth",
                       expanded
                         ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                        : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+                        : "text-foreground hover:bg-sidebar-accent/50"
                     )}
                     onClick={() => setOpenSubmenu(expanded ? null : item.to)}
                   >
@@ -198,10 +198,10 @@ export const AppLayout = ({ children }: { children: React.ReactNode }) => {
                             to={sub.to}
                             onClick={() => setOpen(false)}
                             className={cn(
-                              "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-smooth",
+                              "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-smooth",
                               active
                                 ? "bg-primary/10 text-primary font-medium"
-                                : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+                                : "text-foreground hover:bg-sidebar-accent/50"
                             )}
                           >
                             <sub.icon className="w-4 h-4" />
@@ -221,10 +221,10 @@ export const AppLayout = ({ children }: { children: React.ReactNode }) => {
                 to={item.to}
                 onClick={() => setOpen(false)}
                 className={cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-smooth",
+                  "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-smooth",
                   active
                     ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-                    : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+                    : "text-foreground hover:bg-sidebar-accent/50"
                 )}
               >
                 <item.icon className="w-4 h-4" />
