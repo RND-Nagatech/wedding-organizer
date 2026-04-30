@@ -24,6 +24,15 @@ const Payments = ({
 }) => {
   const payments = usePayments();
   const clients = useClients();
+  const bookings = useMemo(() => {
+    // Ambil semua booking, mapping by code untuk lookup cepat
+    const all = store.getBookings ? store.getBookings() : [];
+    const map = new Map();
+    for (const b of all) {
+      if (b.code) map.set(b.code, b);
+    }
+    return map;
+  }, []);
 
   const [kodeBooking, setKodeBooking] = useState<string>("all");
   const [kodeClient, setKodeClient] = useState<string>(filterClientCode || "all");
@@ -40,6 +49,13 @@ const Payments = ({
   const [perPage, setPerPage] = useState(10);
 
   const list = payments.filter((p) => {
+    // Filter booking: hanya yang approved dan event belum selesai
+    const b = bookings.get(p.bookingCode);
+    if (!b) return false;
+    if (!(
+      (b.statusBooking === "approved" || b.reviewStatus === "approved") &&
+      (b.eventStatus !== "selesai" && b.eventStatus !== "batal")
+    )) return false;
     if (kodeBooking !== "all" && p.bookingCode !== kodeBooking) return false;
     if (kodeClient !== "all" && p.clientCode !== kodeClient) return false;
     if (status !== "all") {
@@ -134,7 +150,6 @@ const Payments = ({
                   <SelectItem value="cicilan">{statusLabel("cicilan")}</SelectItem>
                   <SelectItem value="lunas">{statusLabel("lunas")}</SelectItem>
                   <SelectItem value="belum_bayar">{statusLabel("belum_bayar")}</SelectItem>
-                  <SelectItem value="belum bayar">{statusLabel("belum bayar")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>

@@ -161,6 +161,8 @@ export default function ProjectDetail() {
 
   const [loadingForm, setLoadingForm] = useState(false);
   const [digitalForm, setDigitalForm] = useState<any>(null);
+  const [openFav, setOpenFav] = useState(false);
+  const [selectedFav, setSelectedFav] = useState<any>(null);
 
   // Approval state (embedded)
   const [kategoriOptions, setKategoriOptions] = useState<any[]>([]);
@@ -169,6 +171,8 @@ export default function ProjectDetail() {
   const [loadingVendorOptions, setLoadingVendorOptions] = useState(false);
   const [vendorOptions, setVendorOptions] = useState<any[]>([]);
   const [selectedVendorByKategori, setSelectedVendorByKategori] = useState<Record<string, string>>({});
+  const [jamMulai, setJamMulai] = useState<string>("");
+  const [jamSelesai, setJamSelesai] = useState<string>("");
   const [approving, setApproving] = useState(false);
   const [pricingSaving, setPricingSaving] = useState(false);
   const [pricing, setPricing] = useState<any>({
@@ -288,6 +292,12 @@ export default function ProjectDetail() {
     }
     setSelectedVendorByKategori(next);
   }, [kodeBooking, booking?.vendorSelectedIds]);
+
+  useEffect(() => {
+    // default time from booking if present
+    setJamMulai(String((booking as any)?.jamMulai || (booking as any)?.jam_mulai || ""));
+    setJamSelesai(String((booking as any)?.jamSelesai || (booking as any)?.jam_selesai || ""));
+  }, [booking?.id]);
 
   useEffect(() => {
     if (!booking) return;
@@ -482,7 +492,8 @@ export default function ProjectDetail() {
           <TabsTrigger value="assets">Checklist Barang</TabsTrigger>
           <TabsTrigger value="payments">Payment Tracker</TabsTrigger>
           <TabsTrigger value="form">Digital Form</TabsTrigger>
-          <TabsTrigger value="docs">Documents</TabsTrigger>
+          {/* NOTE: tab Documents di-hide sementara sesuai requirement */}
+          {/* <TabsTrigger value="docs">Documents</TabsTrigger> */}
         </TabsList>
 
         <TabsContent value="timeline">
@@ -690,14 +701,14 @@ export default function ProjectDetail() {
 	            <Card className="p-6 border-border shadow-soft space-y-3">
 	              <div className="font-medium">Katalog Favorit Client</div>
 	              <div className="text-sm text-muted-foreground">Favorit hanya sebagai referensi selera client (bukan pilihan final).</div>
-	              <div className="grid sm:grid-cols-3 gap-3 text-sm">
-	                <div className="rounded-md border border-border p-3">
-	                  <div className="text-xs text-muted-foreground">Baju</div>
-	                  <div className="font-medium mt-1">{favGroups.baju.length} item</div>
-	                  <div className="text-xs text-muted-foreground mt-1 truncate">
-	                    {favGroups.baju.slice(0, 2).map((x) => x.nama_baju).join(", ") || "—"}
-	                  </div>
-	                </div>
+              <div className="grid sm:grid-cols-3 gap-3 text-sm">
+                <div className="rounded-md border border-border p-3">
+                  <div className="text-xs text-muted-foreground">Baju</div>
+                  <div className="font-medium mt-1">{favGroups.baju.length} item</div>
+                  <div className="text-xs text-muted-foreground mt-1 truncate">
+                    {favGroups.baju.slice(0, 2).map((x) => x.nama_baju).join(", ") || "—"}
+                  </div>
+                </div>
 	                <div className="rounded-md border border-border p-3">
 	                  <div className="text-xs text-muted-foreground">Dekorasi</div>
 	                  <div className="font-medium mt-1">{favGroups.dekorasi.length} item</div>
@@ -713,8 +724,8 @@ export default function ProjectDetail() {
 	                  </div>
 	                </div>
 	              </div>
-	              <div className="text-xs text-muted-foreground">Berikutnya: review referensi & wishlist client untuk finalisasi.</div>
-	            </Card>
+              <div className="text-xs text-muted-foreground">Berikutnya: review referensi & wishlist client untuk finalisasi.</div>
+            </Card>
 
             <Card className="p-6 border-border shadow-soft space-y-3">
               <div className="font-medium">Ringkasan</div>
@@ -1030,6 +1041,162 @@ export default function ProjectDetail() {
               </div>
             </Card>
           </div>
+
+          <Card className="p-6 border-border shadow-soft space-y-3 mt-4">
+            <div className="font-medium">Thumbnail Favorit Client</div>
+            <div className="text-sm text-muted-foreground">Klik gambar untuk preview besar.</div>
+
+            {favForClient.length === 0 ? (
+              <div className="text-sm text-muted-foreground">Belum ada favorit.</div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
+                {favGroups.baju.map((x) => {
+                  const src = x.foto ? `${API_ORIGIN}${x.foto}` : "";
+                  return (
+                    <button
+                      key={`baju:${x.id}`}
+                      type="button"
+                      className="text-left rounded-xl overflow-hidden border border-border bg-background hover:shadow-elegant transition-smooth"
+                      onClick={() => {
+                        setSelectedFav({ type: "baju", data: x, note: "" });
+                        setOpenFav(true);
+                      }}
+                    >
+                      <div className="aspect-square bg-muted/30">
+                        {src ? (
+                          <img src={src} alt={x.nama_baju} className="w-full h-full object-cover" loading="lazy" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">No Photo</div>
+                        )}
+                      </div>
+                      <div className="p-2">
+                        <div className="text-xs font-medium truncate">{x.nama_baju}</div>
+                        <div className="text-[11px] text-muted-foreground truncate">Baju</div>
+                      </div>
+                    </button>
+                  );
+                })}
+                {favGroups.dekorasi.map((x) => {
+                  const src = x.foto ? `${API_ORIGIN}${x.foto}` : "";
+                  return (
+                    <button
+                      key={`dekorasi:${x.id}`}
+                      type="button"
+                      className="text-left rounded-xl overflow-hidden border border-border bg-background hover:shadow-elegant transition-smooth"
+                      onClick={() => {
+                        setSelectedFav({ type: "dekorasi", data: x, note: "" });
+                        setOpenFav(true);
+                      }}
+                    >
+                      <div className="aspect-square bg-muted/30">
+                        {src ? (
+                          <img src={src} alt={x.nama_dekorasi} className="w-full h-full object-cover" loading="lazy" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">No Photo</div>
+                        )}
+                      </div>
+                      <div className="p-2">
+                        <div className="text-xs font-medium truncate">{x.nama_dekorasi}</div>
+                        <div className="text-[11px] text-muted-foreground truncate">Dekorasi</div>
+                      </div>
+                    </button>
+                  );
+                })}
+                {favGroups.makeup.map((x) => {
+                  const src = x.foto ? `${API_ORIGIN}${x.foto}` : "";
+                  return (
+                    <button
+                      key={`makeup:${x.id}`}
+                      type="button"
+                      className="text-left rounded-xl overflow-hidden border border-border bg-background hover:shadow-elegant transition-smooth"
+                      onClick={() => {
+                        setSelectedFav({ type: "makeup", data: x, note: "" });
+                        setOpenFav(true);
+                      }}
+                    >
+                      <div className="aspect-square bg-muted/30">
+                        {src ? (
+                          <img src={src} alt={x.nama_style} className="w-full h-full object-cover" loading="lazy" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">No Photo</div>
+                        )}
+                      </div>
+                      <div className="p-2">
+                        <div className="text-xs font-medium truncate">{x.nama_style}</div>
+                        <div className="text-[11px] text-muted-foreground truncate">Makeup</div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </Card>
+
+          <Dialog open={openFav} onOpenChange={setOpenFav}>
+            <DialogContent className="sm:max-w-3xl">
+              <DialogHeader>
+                <DialogTitle className="font-display text-2xl">Preview Favorit</DialogTitle>
+              </DialogHeader>
+              {!selectedFav ? null : (
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="rounded-xl overflow-hidden border border-border bg-muted/20">
+                    {selectedFav.data?.foto ? (
+                      <img src={`${API_ORIGIN}${selectedFav.data.foto}`} alt="Foto" className="w-full h-[420px] object-cover" />
+                    ) : (
+                      <div className="w-full h-[420px] flex items-center justify-center text-sm text-muted-foreground">No Photo</div>
+                    )}
+                  </div>
+                  <div className="space-y-3">
+                    <div>
+                      <div className="text-xs uppercase tracking-wider text-muted-foreground">Kategori</div>
+                      <div className="font-medium capitalize">{selectedFav.type}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs uppercase tracking-wider text-muted-foreground">Nama</div>
+                      <div className="font-display text-2xl">
+                        {selectedFav.type === "baju"
+                          ? selectedFav.data.nama_baju
+                          : selectedFav.type === "dekorasi"
+                            ? selectedFav.data.nama_dekorasi
+                            : selectedFav.data.nama_style}
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div>
+                        <div className="text-xs text-muted-foreground">{selectedFav.type === "dekorasi" ? "Tema" : "Warna"}</div>
+                        <div className="font-medium">
+                          {selectedFav.type === "baju"
+                            ? selectedFav.data.warna || "—"
+                            : selectedFav.type === "dekorasi"
+                              ? selectedFav.data.tema || "—"
+                              : selectedFav.data.kategori || "—"}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-muted-foreground">
+                          {selectedFav.type === "baju" ? "Model" : selectedFav.type === "dekorasi" ? "Warna Dominan" : "MUA"}
+                        </div>
+                        <div className="font-medium">
+                          {selectedFav.type === "baju"
+                            ? selectedFav.data.model || "—"
+                            : selectedFav.type === "dekorasi"
+                              ? selectedFav.data.warna_dominan || "—"
+                              : selectedFav.data.vendor_mua_nama || "—"}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-sm">
+                      <div className="text-xs text-muted-foreground">Catatan Client</div>
+                      <div className="text-muted-foreground">—</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setOpenFav(false)}>Tutup</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </TabsContent>
 
         <TabsContent value="vendor">
@@ -1090,6 +1257,17 @@ export default function ProjectDetail() {
                     </Select>
                   </div>
 
+                  <div className="grid sm:grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label>Jam Mulai (Opsional)</Label>
+                      <Input type="time" value={jamMulai} onChange={(e) => setJamMulai(e.target.value)} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Jam Selesai (Opsional)</Label>
+                      <Input type="time" value={jamSelesai} onChange={(e) => setJamSelesai(e.target.value)} />
+                    </div>
+                  </div>
+
                   <div className="rounded-lg border border-border p-4 bg-background space-y-2">
                     <div className="text-sm font-medium">Vendor dalam kategori</div>
                     {loadingVendorOptions ? (
@@ -1141,6 +1319,8 @@ export default function ProjectDetail() {
                             clientId: booking.clientId,
                             packageId: booking.packageId,
                             eventDate: booking.eventDate,
+                            jamMulai: jamMulai || undefined,
+                            jamSelesai: jamSelesai || undefined,
                             venue: booking.venue,
                             adatId: booking.adatId,
                             vendorSelectedIds,
@@ -1322,6 +1502,8 @@ export default function ProjectDetail() {
                           clientId: booking.clientId,
                           packageId: booking.packageId,
                           eventDate: booking.eventDate,
+                          jamMulai: jamMulai || undefined,
+                          jamSelesai: jamSelesai || undefined,
                           venue: booking.venue,
                           adatId: booking.adatId,
                           vendorSelectedIds: [],
@@ -1373,6 +1555,8 @@ export default function ProjectDetail() {
                           clientId: booking.clientId,
                           packageId: booking.packageId,
                           eventDate: booking.eventDate,
+                          jamMulai: jamMulai || undefined,
+                          jamSelesai: jamSelesai || undefined,
                           venue: booking.venue,
                           adatId: booking.adatId,
                           vendorSelectedIds,
@@ -1992,11 +2176,12 @@ export default function ProjectDetail() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="docs">
+        {/* NOTE: tab Documents di-hide sementara sesuai requirement */}
+        {/* <TabsContent value="docs">
           <Card className="p-10 border-border shadow-soft text-center text-muted-foreground">
             Tab Documents disiapkan sesuai `wo.md` dan akan diisi bertahap.
           </Card>
-        </TabsContent>
+        </TabsContent> */}
       </Tabs>
     </>
   );

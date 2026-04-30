@@ -718,6 +718,8 @@ export const store = {
       packageId: string;
       adatId?: string;
       eventDate: string;
+      jamMulai?: string;
+      jamSelesai?: string;
       venue: string;
       pic?: string;
       eventStatus?: "draft" | "aktif" | "selesai" | "batal";
@@ -732,6 +734,8 @@ export const store = {
         paket_id: payload.packageId,
         adat_id: payload.adatId,
         tanggal_acara: payload.eventDate,
+        jam_mulai: payload.jamMulai,
+        jam_selesai: payload.jamSelesai,
         lokasi_acara: payload.venue,
         pic: payload.pic,
         status_event: payload.eventStatus,

@@ -8,4 +8,7 @@ be/.env
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+/be/.wwebjs_auth/
+/be/.wwebjs_cache/
+/\#file:*
 /be/uploads/

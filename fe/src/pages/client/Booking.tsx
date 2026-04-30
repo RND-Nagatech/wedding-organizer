@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { Link, useNavigate } from "react-router-dom";
 import { clearBookingDraft, readBookingDraft, writeBookingDraft } from "@/lib/bookingDraft";
 import { statusLabel } from "@/lib/labels";
+import { ConfirmActionDialog } from "@/components/dialogs/ConfirmActionDialog";
 
 const sentinelNone = "__none__";
 
@@ -34,7 +35,18 @@ const ClientBooking = () => {
   useKatalogMakeup();
 
   const client = clients.find((c) => c.id === cId);
-  const booking = bookings.find((b) => b.clientId === cId);
+  const myBookings = useMemo(() => bookings.filter((b) => b.clientId === cId), [bookings, cId]);
+  const activeBooking = useMemo(
+    () => myBookings.find((b) => !["cancelled", "completed", "rejected"].includes(String(b.statusBooking || ""))),
+    [myBookings]
+  );
+  const historyBookings = useMemo(
+    () =>
+      myBookings
+        .filter((b) => ["cancelled", "completed", "rejected"].includes(String(b.statusBooking || "")))
+        .sort((a, b) => String(b.eventDate || "").localeCompare(String(a.eventDate || ""))),
+    [myBookings]
+  );
   const pkg = packages.find((p) => p.id === client?.packageId);
 
   const draft = useMemo(() => readBookingDraft(cId), [cId]);
@@ -52,16 +64,16 @@ const ClientBooking = () => {
 
   // default values when starting a new booking
   useEffect(() => {
-    if (!client || booking) return;
+    if (!client || activeBooking) return;
     setForm((f) => ({
       ...f,
-      eventDate: client.weddingDate || "",
+      eventDate: "",
     }));
-  }, [client?.id, booking?.id]);
+  }, [client?.id, activeBooking?.id]);
 
   // load saved draft (per client) into form
   useEffect(() => {
-    if (!client || booking) return;
+    if (!client || activeBooking) return;
     setForm((f) => ({
       ...f,
       eventDate: typeof draft.eventDate === "string" ? draft.eventDate : f.eventDate,
@@ -72,11 +84,11 @@ const ClientBooking = () => {
       addonsQty: typeof draft.addonsQty === "object" && draft.addonsQty ? (draft.addonsQty as any) : f.addonsQty,
     }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [client?.id, booking?.id, cId]);
+  }, [client?.id, activeBooking?.id, cId]);
 
   // autosave draft while booking not submitted
   useEffect(() => {
-    if (!client || booking) return;
+    if (!client || activeBooking) return;
     try {
       writeBookingDraft(cId, {
         eventDate: form.eventDate || undefined,
@@ -89,9 +101,9 @@ const ClientBooking = () => {
     } catch {
       // ignore storage error
     }
-  }, [client?.id, booking?.id, cId, form]);
+  }, [client?.id, activeBooking?.id, cId, form]);
 
-  if (!booking) {
+  if (!activeBooking) {
     if (!client) {
       return (
         <>
@@ -280,7 +292,7 @@ const ClientBooking = () => {
                 onClick={() => {
                   clearBookingDraft(cId);
                   setForm({
-                    eventDate: client.weddingDate || "",
+                    eventDate: "",
                     venue: "",
                     guests: 0,
                     adatId: sentinelNone,
@@ -298,6 +310,33 @@ const ClientBooking = () => {
             </div>
           </form>
         </Card>
+
+        {historyBookings.length > 0 ? (
+          <Card className="p-6 border-border shadow-soft mt-6">
+            <div className="flex items-start justify-between gap-3 flex-wrap">
+              <div>
+                <div className="font-medium">Riwayat Booking</div>
+                <div className="text-sm text-muted-foreground">Booking yang sudah selesai/dibatalkan/ditolak.</div>
+              </div>
+              <Button asChild variant="outline" size="sm">
+                <Link to="/client/history-bookings">Lihat Semua</Link>
+              </Button>
+            </div>
+            <div className="mt-4 space-y-3">
+              {historyBookings.slice(0, 3).map((b) => (
+                <div key={b.id} className="rounded-lg border border-border p-4 flex items-start justify-between gap-3 flex-wrap">
+                  <div>
+                    <div className="text-xs uppercase tracking-wider text-muted-foreground">Kode Booking</div>
+                    <div className="font-display text-xl mt-1">{String(b.code || b.id).toUpperCase()}</div>
+                    <div className="text-sm text-muted-foreground mt-1">
+                      {formatDate(b.eventDate)} · {b.packageSnapshot?.name || "-"} · {statusLabel(b.statusBooking || "")}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        ) : null}
       </>
     );
   }
@@ -306,11 +345,29 @@ const ClientBooking = () => {
     <>
       <PageHeader
         title="Booking Saya"
-        subtitle={`${(booking.code || booking.id).toUpperCase()} · ${statusLabel(booking.statusBooking || "menunggu_review")}`}
+        subtitle={`${(activeBooking.code || activeBooking.id).toUpperCase()} · ${statusLabel(activeBooking.statusBooking || "menunggu_review")}`}
         actions={
-          <Button asChild variant="outline">
-            <Link to="/client/references">Upload Referensi</Link>
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button asChild variant="outline">
+              <Link to="/client/references">Upload Referensi</Link>
+            </Button>
+            {["draft", "menunggu_review"].includes(String(activeBooking.statusBooking || "")) ? (
+              <ConfirmActionDialog
+                title="Batalkan booking?"
+                description="Booking akan dibatalkan. Anda bisa membuat booking baru setelahnya."
+                confirmText="Batalkan"
+                onConfirm={async () => {
+                  try {
+                    await store.updateBookingStatus(activeBooking.id, "cancelled");
+                    toast.success("Booking berhasil dibatalkan");
+                  } catch (err: any) {
+                    toast.error(err?.message || "Gagal membatalkan booking");
+                  }
+                }}
+                trigger={<Button variant="destructive">Batalkan Booking</Button>}
+              />
+            ) : null}
+          </div>
         }
       />
 
@@ -318,12 +375,12 @@ const ClientBooking = () => {
         <div className="flex items-start justify-between flex-wrap gap-4 mb-6">
           <div>
             <div className="text-[11px] uppercase tracking-[0.2em] text-accent font-medium">Pernikahan</div>
-            <h2 className="font-display text-3xl mt-1">{booking.clientName || client?.name} </h2>
+            <h2 className="font-display text-3xl mt-1">{activeBooking.clientName || client?.name} </h2>
           </div>
           <div className="flex items-center gap-2">
-            <StatusBadge status={booking.statusBooking || "menunggu_review"} />
+            <StatusBadge status={activeBooking.statusBooking || "menunggu_review"} />
             <div className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1 text-xs bg-background">
-              <BadgeCheck className="w-3.5 h-3.5 text-primary" /> {statusLabel(booking.statusBooking || "menunggu_review")}
+              <BadgeCheck className="w-3.5 h-3.5 text-primary" /> {statusLabel(activeBooking.statusBooking || "menunggu_review")}
             </div>
           </div>
         </div>
@@ -331,26 +388,26 @@ const ClientBooking = () => {
         <div className="grid sm:grid-cols-3 gap-6 pt-6 border-t border-border">
           <div>
             <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground"><CalendarDays className="w-3.5 h-3.5" /> Tanggal</div>
-            <div className="font-display text-lg mt-1">{formatDate(booking.eventDate)}</div>
+            <div className="font-display text-lg mt-1">{formatDate(activeBooking.eventDate)}</div>
           </div>
           <div>
             <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground"><MapPin className="w-3.5 h-3.5" /> Lokasi</div>
-            <div className="font-display text-lg mt-1">{booking.venue}</div>
+            <div className="font-display text-lg mt-1">{activeBooking.venue}</div>
           </div>
           <div>
             <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground"><UsersIcon className="w-3.5 h-3.5" /> Tamu</div>
-            <div className="font-display text-lg mt-1">{booking.guests || 0} orang</div>
+            <div className="font-display text-lg mt-1">{activeBooking.guests || 0} orang</div>
           </div>
         </div>
       </Card>
 
       <Card className="p-6 border-border shadow-soft">
         <div className="text-[11px] uppercase tracking-[0.2em] text-accent font-medium">Paket Terpilih</div>
-        <h3 className="font-display text-2xl mt-1">{booking.packageSnapshot?.name || pkg?.name}</h3>
-        <p className="text-sm text-muted-foreground mt-1">{booking.packageSnapshot?.tagline || pkg?.tagline}</p>
+        <h3 className="font-display text-2xl mt-1">{activeBooking.packageSnapshot?.name || pkg?.name}</h3>
+        <p className="text-sm text-muted-foreground mt-1">{activeBooking.packageSnapshot?.tagline || pkg?.tagline}</p>
 
         <ul className="mt-5 grid sm:grid-cols-2 gap-2">
-          {(booking.packageSnapshot?.features || pkg?.features || []).map((f) => (
+          {(activeBooking.packageSnapshot?.features || pkg?.features || []).map((f) => (
             <li key={f} className="flex items-start gap-2 text-sm">
               <Heart className="w-3.5 h-3.5 text-primary fill-primary mt-1 shrink-0" />
               <span>{f}</span>
@@ -360,6 +417,33 @@ const ClientBooking = () => {
       </Card>
 
       {/* Favorit katalog tidak ditampilkan di card booking */}
+
+      {historyBookings.length > 0 ? (
+        <Card className="p-6 border-border shadow-soft mt-6">
+          <div className="flex items-start justify-between gap-3 flex-wrap">
+            <div>
+              <div className="font-medium">Riwayat Booking</div>
+              <div className="text-sm text-muted-foreground">Booking yang sudah selesai/dibatalkan/ditolak.</div>
+            </div>
+            <Button asChild variant="outline" size="sm">
+              <Link to="/client/history-bookings">Lihat Semua</Link>
+            </Button>
+          </div>
+          <div className="mt-4 space-y-3">
+            {historyBookings.slice(0, 3).map((b) => (
+              <div key={b.id} className="rounded-lg border border-border p-4 flex items-start justify-between gap-3 flex-wrap">
+                <div>
+                  <div className="text-xs uppercase tracking-wider text-muted-foreground">Kode Booking</div>
+                  <div className="font-display text-xl mt-1">{String(b.code || b.id).toUpperCase()}</div>
+                  <div className="text-sm text-muted-foreground mt-1">
+                    {formatDate(b.eventDate)} · {b.packageSnapshot?.name || "-"} · {statusLabel(b.statusBooking || "")}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      ) : null}
     </>
   );
 };

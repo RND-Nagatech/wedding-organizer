@@ -38,13 +38,22 @@ export const PaymentFormDialog = ({
     catatan: "",
   });
 
-  const bookingOptions = useMemo(() => bookings.filter((b) => b.code), [bookings]);
+  // Hanya tampilkan booking yang sudah approved dan event belum selesai
+  const bookingOptions = useMemo(
+    () =>
+      bookings.filter(
+        (b) =>
+          b.code &&
+          (b.statusBooking === "approved" || b.reviewStatus === "approved") &&
+          (b.eventStatus !== "selesai" && b.eventStatus !== "batal")
+      ),
+    [bookings]
+  );
 
   useEffect(() => {
     if (!open) return;
-    const firstCode = bookingOptions[0]?.code || "";
     setForm({
-      kode_booking: fixedKodeBooking || (initial?.bookingCode ?? firstCode),
+      kode_booking: fixedKodeBooking || initial?.bookingCode || "",
       nominal_bayar: initial?.amountPaid ?? 0,
       metode_pembayaran: initial?.method ?? "transfer",
       tanggal_pembayaran: initial?.paidDate ?? new Date().toISOString().slice(0, 10),
@@ -125,7 +134,27 @@ export const PaymentFormDialog = ({
             >
               <SelectTrigger><SelectValue placeholder="Pilih booking" /></SelectTrigger>
               <SelectContent>
-                {bookingOptions.map((b) => {
+                {/* Searchable input */}
+                <div className="px-2 py-1 sticky top-0 z-10 bg-popover">
+                  <input
+                    type="text"
+                    className="w-full rounded border px-2 py-1 text-sm focus:outline-none"
+                    placeholder="Cari booking..."
+                    value={form._searchBooking || ""}
+                    onChange={e => setForm((f: any) => ({ ...f, _searchBooking: e.target.value }))}
+                    autoFocus
+                  />
+                </div>
+                {(bookingOptions.filter(b => {
+                  const c = clients.find((x) => x.id === b.clientId);
+                  const search = (form._searchBooking || "").toLowerCase();
+                  return (
+                    !search ||
+                    (b.code?.toLowerCase().includes(search)) ||
+                    (c?.name?.toLowerCase().includes(search)) ||
+                    (c?.partner?.toLowerCase().includes(search))
+                  );
+                })).map((b) => {
                   const c = clients.find((x) => x.id === b.clientId);
                   return (
                     <SelectItem key={b.id} value={b.code!}>

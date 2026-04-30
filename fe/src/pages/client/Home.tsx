@@ -20,7 +20,9 @@ const ClientHome = () => {
   const payments = usePayments();
 
   const client = clients.find((c) => c.id === cId);
-  const booking = bookings.find((b) => b.clientId === cId);
+  const booking = bookings.find(
+    (b) => b.clientId === cId && !["cancelled", "completed", "rejected"].includes(String(b.statusBooking || ""))
+  );
   const pkg = packages.find((p) => p.id === client?.packageId);
   const inv = invoices.find((i) => i.clientId === cId);
   const tasks = checklist.filter((t) => t.bookingId === booking?.id);

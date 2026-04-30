@@ -18,6 +18,8 @@ const TtBookingSchema = new mongoose.Schema({
   status_event: { type: String, enum: ["draft", "aktif", "selesai", "batal"], default: "draft", index: true },
   status_review: { type: String, enum: ["menunggu_review", "approved", "rejected"], default: "menunggu_review", index: true },
   catatan: { type: String, trim: true },
+  cancelled_at: { type: Date },
+  cancelled_note: { type: String, trim: true },
 
   // Add-ons + final pricing (estimasi client, final WO)
   addons: [
@@ -63,6 +65,8 @@ const TtBookingSchema = new mongoose.Schema({
     vendor_ids: [{ type: String }],
   },
   tanggal_acara: { type: String, required: true }, // yyyy-mm-dd
+  jam_mulai: { type: String, trim: true }, // HH:mm (opsional)
+  jam_selesai: { type: String, trim: true }, // HH:mm (opsional)
   lokasi: { type: String },
   tamu: { type: Number },
   vendor_dipilih_ids: [{ type: String }],

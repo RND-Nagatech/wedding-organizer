@@ -44,6 +44,7 @@ import ClientWishlistAdmin from "./pages/admin/ClientWishlist";
 import ChecklistBarang from "./pages/admin/ChecklistBarang";
 import CrewAssignments from "./pages/admin/CrewAssignments";
 import Keuangan from "./pages/admin/Keuangan";
+import Testimonials from "./pages/admin/Testimonials";
 
 import ClientHome from "./pages/client/Home";
 import ClientPackages from "./pages/client/ClientPackages";
@@ -61,6 +62,7 @@ import DigitalForm from "./pages/client/DigitalForm";
 import MyPlanning from "./pages/client/MyPlanning";
 import MyPreferences from "./pages/client/MyPreferences";
 import MyGuests from "./pages/client/MyGuests";
+import BookingHistory from "./pages/client/BookingHistory";
 
 const queryClient = new QueryClient();
 
@@ -94,6 +96,7 @@ const App = () => (
                         <Route path="catalog-dekorasi" element={<CatalogDekorasi />} />
                         <Route path="catalog-makeup" element={<CatalogMakeup />} />
                         <Route path="addons" element={<Addons />} />
+                        <Route path="testimoni" element={<Testimonials />} />
                         <Route path="client-references" element={<ClientReferencesAdmin />} />
                         <Route path="client-wishlist" element={<ClientWishlistAdmin />} />
                         <Route path="checklist-barang" element={<ChecklistBarang />} />
@@ -133,6 +136,7 @@ const App = () => (
                         <Route path="preferences" element={<MyPreferences />} />
                         <Route path="packages" element={<ClientPackages />} />
                         <Route path="booking" element={<ClientBooking />} />
+                        <Route path="history-bookings" element={<BookingHistory />} />
                         <Route path="catalog-baju" element={<ClientCatalogBaju />} />
                         <Route path="catalog-dekorasi" element={<ClientCatalogDekorasi />} />
                         <Route path="catalog-makeup" element={<ClientCatalogMakeup />} />

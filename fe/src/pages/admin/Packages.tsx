@@ -13,9 +13,13 @@ import { useState } from "react";
 const Packages = ({
   adminMode = true,
   onPickPackage,
+  pickDisabled = false,
+  topNotice,
 }: {
   adminMode?: boolean;
   onPickPackage?: (packageId: string) => void;
+  pickDisabled?: boolean;
+  topNotice?: React.ReactNode;
 }) => {
   const packages = usePackages();
   const vendors = useVendors ? useVendors() : [];
@@ -35,6 +39,8 @@ const Packages = ({
         subtitle={adminMode ? "Kelola paket yang ditawarkan" : "Temukan paket yang sesuai dengan visi Anda"}
         actions={adminMode ? <AddPackageDialog /> : undefined}
       />
+
+      {!adminMode && topNotice ? <div className="mb-4">{topNotice}</div> : null}
 
       <div className="grid md:grid-cols-3 gap-6">
         {packages.map((p) => (
@@ -112,6 +118,7 @@ const Packages = ({
                 <Button
                   className={`w-full ${p.popular ? "bg-primary hover:bg-primary/90" : ""}`}
                   variant={p.popular ? "default" : "outline"}
+                  disabled={pickDisabled}
                   onClick={() => onPickPackage?.(p.id)}
                 >
                   Pilih Paket Ini

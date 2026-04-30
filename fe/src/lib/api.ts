@@ -494,6 +494,22 @@ export async function updateTimelineClient(id: string, payload: any) {
   return res.json();
 }
 
+export async function tambahTimelineClient(payload: any) {
+  const res = await fetch(`${API_BASE}/tt_timeline_client`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error("Gagal menambah timeline client");
+  return res.json();
+}
+
+export async function hapusTimelineClient(id: string) {
+  const res = await fetch(`${API_BASE}/tt_timeline_client/${id}`, { method: "DELETE" });
+  if (!res.ok) throw new Error("Gagal menghapus timeline client");
+  return res.json();
+}
+
 // Favorit katalog client (tt_katalog_favorit)
 export async function ambilKatalogFavorit(params?: { client_id?: string; katalog_type?: string; kode_booking?: string }) {
   const qs = params ? `?${new URLSearchParams(params as any).toString()}` : "";
@@ -688,6 +704,37 @@ export async function uploadGambar(file: File) {
   const res = await fetch(`${API_BASE}/upload`, { method: "POST", body: fd });
   if (!res.ok) throw new Error("Gagal upload gambar");
   return res.json() as Promise<{ url: string }>;
+}
+
+// Testimoni (tm_testimoni)
+export async function ambilTestimoni(params?: { status?: string }) {
+  const qs = params ? `?${new URLSearchParams(params as any).toString()}` : "";
+  const res = await fetch(`${API_BASE}/tm_testimoni${qs}`);
+  if (!res.ok) throw new Error("Gagal mengambil data testimoni");
+  return res.json();
+}
+export async function tambahTestimoni(data: any) {
+  const res = await fetch(`${API_BASE}/tm_testimoni`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error("Gagal menambah testimoni");
+  return res.json();
+}
+export async function editTestimoni(id: string, data: any) {
+  const res = await fetch(`${API_BASE}/tm_testimoni/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error("Gagal mengedit testimoni");
+  return res.json();
+}
+export async function hapusTestimoni(id: string) {
+  const res = await fetch(`${API_BASE}/tm_testimoni/${id}`, { method: "DELETE" });
+  if (!res.ok) throw new Error("Gagal menghapus testimoni");
+  return res.json();
 }
 
 // Adat / Konsep

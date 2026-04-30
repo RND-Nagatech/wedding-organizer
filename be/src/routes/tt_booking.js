@@ -86,11 +86,31 @@ function addDaysISO(isoDate, days) {
   }
 }
 
+function toMinutes(hhmm) {
+  const s = String(hhmm || "").trim();
+  if (!s) return null;
+  const [h, m] = s.split(":").map((x) => Number(x));
+  if (Number.isNaN(h) || Number.isNaN(m)) return null;
+  return h * 60 + m;
+}
+
+function isOverlap({ aStart, aEnd, bStart, bEnd }) {
+  // If any side missing times -> treat as full-day overlap (same date already ensured)
+  const as = toMinutes(aStart);
+  const ae = toMinutes(aEnd);
+  const bs = toMinutes(bStart);
+  const be = toMinutes(bEnd);
+  if (as === null || ae === null || bs === null || be === null) return true;
+  return as < be && bs < ae;
+}
+
 async function upsertVendorBookingsForBooking({
   kode_booking,
   tanggal_acara,
   vendorDocs,
   status,
+  jam_mulai,
+  jam_selesai,
 }) {
   const kode = String(kode_booking || "");
   const date = String(tanggal_acara || "");
@@ -113,6 +133,8 @@ async function upsertVendorBookingsForBooking({
       {
         $set: {
           kategori_vendor_id: v.kategori_vendor_id || undefined,
+          jam_mulai: jam_mulai || undefined,
+          jam_selesai: jam_selesai || undefined,
           status,
         },
       },
@@ -183,13 +205,24 @@ router.get("/vendor-options", async (req, res) => {
       kategori_vendor_id: String(kategori_vendor_id),
     }).sort({ createdAt: -1 });
 
-    const blocked = await TtVendorBooking.find({
+    // time overlap check: compare booking's jam_mulai/jam_selesai (if any)
+    const booking = kode_booking ? await TtBooking.findOne({ kode_booking: String(kode_booking) }) : null;
+    const jamMulai = booking?.jam_mulai;
+    const jamSelesai = booking?.jam_selesai;
+
+    const allBooked = await TtVendorBooking.find({
       vendor_id: { $in: allowedVendorIds },
       tanggal_acara: String(tanggal_acara),
       status: { $in: ["hold", "booked"] },
       ...(kode_booking ? { kode_booking: { $ne: String(kode_booking) } } : {}),
-    }).select("vendor_id status kode_booking");
-    const blockedMap = new Map(blocked.map((b) => [String(b.vendor_id), { status: b.status, kode_booking: b.kode_booking }]));
+    }).select("vendor_id status kode_booking jam_mulai jam_selesai");
+
+    const blockedMap = new Map();
+    for (const b of allBooked) {
+      const ok = isOverlap({ aStart: jamMulai, aEnd: jamSelesai, bStart: b.jam_mulai, bEnd: b.jam_selesai });
+      if (!ok) continue;
+      blockedMap.set(String(b.vendor_id), { status: b.status, kode_booking: b.kode_booking });
+    }
 
     const out = vendorDocs.map((v) => {
       const blk = blockedMap.get(String(v._id));
@@ -242,6 +275,23 @@ router.post("/", async (req, res) => {
 
     if (!id_klien || !id_paket || !tanggal_acara) {
       return res.status(400).json({ pesan: "Klien, paket, dan tanggal acara wajib diisi" });
+    }
+
+    // Prevent multiple active bookings per client (client flow)
+    const activeStatuses = ["draft", "menunggu_review", "approved", "ongoing"];
+    const existingActive = await TtBooking.findOne({
+      id_klien: String(id_klien),
+      $or: [
+        { status_booking: { $in: activeStatuses } },
+        // legacy rows without status_booking
+        { $and: [{ $or: [{ status_booking: { $exists: false } }, { status_booking: null }, { status_booking: "" }] }, { status_event: { $in: ["draft", "aktif"] } }] },
+      ],
+    }).select("_id kode_booking status_booking status_event status_review");
+    if (existingActive) {
+      return res.status(409).json({
+        pesan: "Klien masih memiliki booking aktif. Batalkan/selesaikan booking tersebut sebelum membuat booking baru.",
+        kode_booking_aktif: existingActive.kode_booking,
+      });
     }
 
     const client = await TmClient.findById(String(id_klien));
@@ -446,6 +496,8 @@ router.put("/:id", async (req, res) => {
     const {
       // Tahap 5
       tanggal_acara,
+      jam_mulai,
+      jam_selesai,
       lokasi_acara,
       status_booking,
       status_event,
@@ -474,6 +526,8 @@ router.put("/:id", async (req, res) => {
       Array.isArray(req.body?.vendor_dipilih_ids) ? req.body.vendor_dipilih_ids.map(String).filter(Boolean) : undefined;
 
     const nextTanggal = typeof tanggal_acara !== "undefined" ? String(tanggal_acara) : booking.tanggal_acara;
+    const nextJamMulai = typeof jam_mulai !== "undefined" ? (jam_mulai ? String(jam_mulai) : "") : booking.jam_mulai;
+    const nextJamSelesai = typeof jam_selesai !== "undefined" ? (jam_selesai ? String(jam_selesai) : "") : booking.jam_selesai;
     const nextLokasi =
       typeof lokasi_acara !== "undefined"
         ? lokasi_acara
@@ -482,6 +536,8 @@ router.put("/:id", async (req, res) => {
           : booking.lokasi;
 
     booking.tanggal_acara = nextTanggal;
+    booking.jam_mulai = nextJamMulai || undefined;
+    booking.jam_selesai = nextJamSelesai || undefined;
     booking.lokasi = nextLokasi;
 
     if (typeof tamu !== "undefined") booking.tamu = tamu;
@@ -492,6 +548,12 @@ router.put("/:id", async (req, res) => {
       const legacy = mapStatusBookingToLegacy(next);
       if (legacy?.status_event) booking.status_event = legacy.status_event;
       if (legacy?.status_review) booking.status_review = legacy.status_review;
+      if (next === "cancelled") {
+        booking.cancelled_at = booking.cancelled_at || new Date();
+        if (typeof catatan !== "undefined" && catatan) {
+          booking.cancelled_note = String(catatan);
+        }
+      }
     }
     if (typeof status_event !== "undefined") booking.status_event = status_event;
     if (typeof status_review !== "undefined") booking.status_review = status_review;
@@ -678,6 +740,8 @@ router.put("/:id", async (req, res) => {
           tanggal_acara: booking.tanggal_acara,
           vendorDocs,
           status: "booked",
+          jam_mulai: booking.jam_mulai,
+          jam_selesai: booking.jam_selesai,
         });
       }
     }
@@ -691,12 +755,15 @@ router.put("/:id", async (req, res) => {
       }
 
       if (vendor_dipilih_ids.length > 0) {
-        const taken = await TtVendorBooking.find({
+        const allTaken = await TtVendorBooking.find({
           vendor_id: { $in: vendor_dipilih_ids },
           tanggal_acara: String(booking.tanggal_acara),
           status: { $in: ["hold", "booked"] },
           kode_booking: { $ne: booking.kode_booking },
         }).populate("vendor_id");
+        const taken = allTaken.filter((t) =>
+          isOverlap({ aStart: booking.jam_mulai, aEnd: booking.jam_selesai, bStart: t.jam_mulai, bEnd: t.jam_selesai })
+        );
         if (taken.length > 0) {
           return res.status(409).json({
             pesan: "Ada vendor yang tidak available pada tanggal tersebut",
@@ -731,6 +798,8 @@ router.put("/:id", async (req, res) => {
         tanggal_acara: booking.tanggal_acara,
         vendorDocs,
         status: vendorBookingStatus,
+        jam_mulai: booking.jam_mulai,
+        jam_selesai: booking.jam_selesai,
       });
     }
 

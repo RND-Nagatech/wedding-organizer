@@ -52,10 +52,10 @@ export function BookingEventFormDialog(props: {
     setSelectedKategoriId("");
     setVendorsAvailable([]);
     setForm({
-      clientId: initial?.clientId ?? (clients[0]?.id ?? ""),
+      clientId: initial?.clientId ?? (mode === "add" ? "" : clients[0]?.id ?? ""),
       packageId: initial?.packageId ?? (packages[0]?.id ?? ""),
       adatId: initial?.adatId ?? (adat[0]?.id ?? ""),
-      eventDate: initial?.eventDate ?? "",
+      eventDate: mode === "add" ? "" : (initial?.eventDate ?? ""),
       venue: initial?.venue ?? "",
       pic: initial?.pic ?? "",
       eventStatus: initial?.eventStatus ?? "draft",
@@ -185,7 +185,24 @@ export function BookingEventFormDialog(props: {
               <Select value={form.clientId} onValueChange={(v) => setForm((f) => ({ ...f, clientId: v }))}>
                 <SelectTrigger><SelectValue placeholder="Pilih klien" /></SelectTrigger>
                 <SelectContent>
-                  {clients.map((c) => (
+                  {/* Searchable input */}
+                  <div className="px-2 py-1 sticky top-0 z-10 bg-popover">
+                    <input
+                      type="text"
+                      className="w-full rounded border px-2 py-1 text-sm focus:outline-none"
+                      placeholder="Cari klien..."
+                      value={form._searchClient || ""}
+                      onChange={e => setForm((f) => ({ ...f, _searchClient: e.target.value }))}
+                      autoFocus
+                    />
+                  </div>
+                  {(clients.filter(c => {
+                    const search = (form._searchClient || "").toLowerCase();
+                    return !search ||
+                      (c.code?.toLowerCase().includes(search)) ||
+                      (c.name?.toLowerCase().includes(search)) ||
+                      (c.partner?.toLowerCase().includes(search));
+                  })).map((c) => (
                     <SelectItem key={c.id} value={c.id}>
                       {(c.code ? `${c.code} · ` : "") + `${c.name} & ${c.partner}`}
                     </SelectItem>

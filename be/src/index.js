@@ -64,6 +64,7 @@ import tpSystemRouter from "./routes/tp_system.js";
 import ttKatalogFavoritRouter from "./routes/tt_katalog_favorit.js";
 import waRouter from "./routes/wa.js";
 import ttWaLogRouter from "./routes/tt_wa_log.js";
+import tmTestimoniRouter from "./routes/tm_testimoni.js";
 app.use("/api/tp_system", tpSystemRouter);
 
 app.use("/uploads", express.static("uploads"));
@@ -97,6 +98,7 @@ app.use("/api/tt_timeline_client", ttTimelineClientRouter);
 app.use("/api/tt_katalog_favorit", ttKatalogFavoritRouter);
 app.use("/api/wa", waRouter);
 app.use("/api/tt_wa_log", ttWaLogRouter);
+app.use("/api/tm_testimoni", tmTestimoniRouter);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {

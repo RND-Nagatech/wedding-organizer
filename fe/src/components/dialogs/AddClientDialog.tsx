@@ -112,7 +112,7 @@ export const ClientFormDialog = ({
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label>Email (Opsional)</Label>
+              <Label>Email</Label>
               <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
             </div>
             <div className="space-y-1.5">
@@ -142,6 +142,7 @@ export const ClientFormDialog = ({
                 </SelectContent>
               </Select>
             </div> */}
+            {/*
             <div className="space-y-1.5">
               <Label>Status</Label>
               <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v as Client["status"] })}>
@@ -151,6 +152,7 @@ export const ClientFormDialog = ({
                 </SelectContent>
               </Select>
             </div>
+            */}
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>Batal</Button>

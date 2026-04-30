@@ -27,6 +27,7 @@ const adminNav: NavItem[] = [
       { to: "/admin/catalog-baju", label: "Katalog Baju", icon: Package },
       { to: "/admin/catalog-dekorasi", label: "Katalog Dekorasi", icon: Package },
       { to: "/admin/catalog-makeup", label: "Katalog Makeup", icon: Package },
+      { to: "/admin/testimoni", label: "Master Testimoni", icon: ListChecks },
       { to: "/admin/clients", label: "Klien", icon: Users, perm: "clients" },
     ],
   },
@@ -94,6 +95,7 @@ const clientNav: NavItem[] = [
     submenu: [
       { to: "/client/packages", label: "Pilih Paket", icon: Package },
       { to: "/client/booking", label: "Booking", icon: CalendarDays },
+      { to: "/client/history-bookings", label: "Riwayat Booking", icon: CalendarDays },
       { to: "/client/timeline", label: "Timeline", icon: ListChecks },
     ],
   },
@@ -117,7 +119,8 @@ const clientNav: NavItem[] = [
     icon: Receipt,
     submenu: [{ to: "/client/payments", label: "Pembayaran", icon: Receipt }],
   },
-  { to: "/client/guests", label: "My Guests", icon: Users },
+  // NOTE: hidden sementara sesuai requirement
+  // { to: "/client/guests", label: "My Guests", icon: Users },
 ];
 
 export const AppLayout = ({ children }: { children: React.ReactNode }) => {

@@ -52,7 +52,7 @@ const Clients = () => {
                 <TableHead>Nama Wanita</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>No. HP</TableHead>
-                <TableHead>Status</TableHead>
+                {/* <TableHead>Status</TableHead> */}
                 <TableHead className="text-right w-[160px]">Aksi</TableHead>
               </TableRow>
             </TableHeader>
@@ -64,7 +64,7 @@ const Clients = () => {
                   <TableCell>{c.partner}</TableCell>
                   <TableCell>{c.email || "—"}</TableCell>
                   <TableCell>{c.phone || "—"}</TableCell>
-                  <TableCell><StatusBadge status={c.status} /></TableCell>
+                  {/* <TableCell><StatusBadge status={c.status} /></TableCell> */}
                   <TableCell className="text-right">
                     <div className="inline-flex gap-2">
                       <ClientFormDialog

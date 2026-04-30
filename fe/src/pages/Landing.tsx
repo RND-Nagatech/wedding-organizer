@@ -29,20 +29,13 @@ const Landing = () => {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {user ? (
-            <Button onClick={goDashboard} className="bg-primary hover:bg-primary/90">
-              Buka Dashboard <ArrowRight className="w-4 h-4 ml-1.5" />
-            </Button>
-          ) : (
-            <>
-              <Button variant="ghost" asChild>
-                <Link to="/login">Masuk</Link>
-              </Button>
-              <Button asChild className="bg-primary hover:bg-primary/90">
-                <Link to="/register">Daftar Klien</Link>
-              </Button>
-            </>
-          )}
+          {/* NOTE: tombol "Buka Dashboard" di-hide agar landing selalu konsisten (tidak tergantung cache/localStorage lama). */}
+          <Button variant="ghost" asChild>
+            <Link to="/login">Masuk</Link>
+          </Button>
+          <Button asChild className="bg-primary hover:bg-primary/90">
+            <Link to="/register">Daftar Klien</Link>
+          </Button>
         </div>
       </nav>
 

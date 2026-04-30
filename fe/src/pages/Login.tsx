@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Heart } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { loginApp } from "@/lib/api";
+import { ambilTestimoni, loginApp } from "@/lib/api";
 import { useSystemProfile } from "@/contexts/SystemProfileContext";
 
 
@@ -18,6 +18,31 @@ const Login = () => {
   const { login } = useAuth();
   const nav = useNavigate();
   const { profile } = useSystemProfile();
+  const [testimoni, setTestimoni] = useState<any[]>([]);
+  const [testiIndex, setTestiIndex] = useState(0);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const rows = await ambilTestimoni({ status: "aktif" });
+        setTestimoni(Array.isArray(rows) ? rows : []);
+      } catch {
+        setTestimoni([]);
+      }
+    })();
+  }, []);
+
+  useEffect(() => {
+    if (testimoni.length <= 1) return;
+    const t = window.setInterval(() => setTestiIndex((i) => (i + 1) % testimoni.length), 5000);
+    return () => window.clearInterval(t);
+  }, [testimoni.length]);
+
+  useEffect(() => {
+    if (remember) return;
+    localStorage.removeItem("wo_remember_email");
+    localStorage.removeItem("wo_remember_password");
+  }, [remember]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -73,10 +98,24 @@ const Login = () => {
             Masuk untuk mengelola paket, vendor, event, pembayaran, dan progress persiapan.
           </p>
           <div className="mt-12 p-6 rounded-2xl bg-card/60 backdrop-blur border border-border shadow-soft">
-            <p className="text-sm italic text-foreground/80 font-display">
-              "Aurelia mengubah hari pernikahan kami menjadi pengalaman yang tak terlupakan. Setiap detail terasa personal."
-            </p>
-            <div className="mt-3 text-xs text-muted-foreground">— Citra & Aldo, Desember 2025</div>
+            {testimoni.length === 0 ? (
+              <>
+                <p className="text-sm italic text-foreground/80 font-display">
+                  "Tim WO sangat membantu. Semua terasa rapi dan terarah dari awal hingga hari-H."
+                </p>
+                <div className="mt-3 text-xs text-muted-foreground">— Klien Wedding Organizer</div>
+              </>
+            ) : (
+              <>
+                <p className="text-sm italic text-foreground/80 font-display">
+                  "{String(testimoni[testiIndex]?.isi_testimoni || "")}"
+                </p>
+                <div className="mt-3 text-xs text-muted-foreground">
+                  — {String(testimoni[testiIndex]?.nama || "Klien")}
+                  {testimoni[testiIndex]?.jabatan ? `, ${String(testimoni[testiIndex]?.jabatan)}` : ""}
+                </div>
+              </>
+            )}
           </div>
         </div>
         <div className="absolute -bottom-20 -right-20 w-80 h-80 rounded-full bg-primary/10 blur-3xl" />
@@ -129,7 +168,14 @@ const Login = () => {
                   <input
                     type="checkbox"
                     checked={remember}
-                    onChange={e => setRemember(e.target.checked)}
+                    onChange={(e) => {
+                      const next = e.target.checked;
+                      setRemember(next);
+                      if (!next) {
+                        localStorage.removeItem("wo_remember_email");
+                        localStorage.removeItem("wo_remember_password");
+                      }
+                    }}
                     className="accent-primary"
                   />
                   Ingat saya
