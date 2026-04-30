@@ -81,8 +81,8 @@ const adminNav: NavItem[] = [
     submenu: [
       { to: "/admin/settings/users", label: "Manajemen User", icon: Users },
       { to: "/admin/settings/profile", label: "Profil Bisnis", icon: Heart },
-      { to: "/admin/whatsapp", label: "WhatsApp Connection", icon: MessageCircle },
-      { to: "/admin/whatsapp/log", label: "WhatsApp Log", icon: BarChart3 },
+        { to: "/admin/whatsapp", label: "WhatsApp Connection", icon: MessageCircle },
+        // { to: "/admin/whatsapp/log", label: "WhatsApp Log", icon: BarChart3 }, // sementara disembunyikan
     ]
   },
 ];
